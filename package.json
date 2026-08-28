@@ -2,6 +2,7 @@
   "name": "nexus",
   "private": true,
   "scripts": {
+    "start": "node packages/bot/dist/index.js",
     "dev:bot": "pnpm --filter bot dev",
     "dev:dashboard": "pnpm --filter dashboard dev",
     "build:bot": "pnpm --filter bot build",
