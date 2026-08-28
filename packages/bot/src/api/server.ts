@@ -2,10 +2,9 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
-import fastifyStatic from '@fastify/static';
-import { dirname, join } from 'node:path';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 import { env } from '../env.js';
 import { healthRoute } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
@@ -13,6 +12,34 @@ import { guildRoutes } from './routes/guilds.js';
 import { messageRoutes } from './routes/messages.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const DASHBOARD_DIST = join(__dirname, '../../../dashboard/dist');
+
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+function serveDashboard(filePath: string): { status: number; body: Buffer | string; headers: Record<string, string> } | null {
+  const fullPath = join(DASHBOARD_DIST, filePath);
+  if (existsSync(fullPath) && statSync(fullPath).isFile()) {
+    const ext = extname(fullPath);
+    return {
+      status: 200,
+      body: readFileSync(fullPath),
+      headers: { 'content-type': MIME_TYPES[ext] ?? 'application/octet-stream' },
+    };
+  }
+  return null;
+}
 
 export async function createServer() {
   const app = Fastify({ logger: env.NODE_ENV === 'development' });
@@ -44,23 +71,27 @@ export async function createServer() {
   await app.register(guildRoutes, { prefix: '/api/guilds' });
   await app.register(messageRoutes, { prefix: '/api/messages' });
 
-  // Serve dashboard in production
-  const dashboardDist = join(__dirname, '../../../dashboard/dist');
-  if (env.NODE_ENV === 'production' && existsSync(dashboardDist)) {
-    await app.register(fastifyStatic, {
-      root: dashboardDist,
-      prefix: '/',
-      decorateReply: false,
+  if (env.NODE_ENV === 'production' && existsSync(DASHBOARD_DIST)) {
+    app.get('/', async (_req, reply) => {
+      const file = serveDashboard('index.html');
+      if (file !== null) return reply.status(200).headers(file.headers).send(file.body);
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Dashboard not found' } });
     });
 
-    // SPA fallback - serve index.html for non-API routes
+    app.get('/assets/*', async (req, reply) => {
+      const path = req.url.replace(/^\/assets\//, '');
+      const file = serveDashboard(join('assets', path));
+      if (file !== null) return reply.status(200).headers(file.headers).send(file.body);
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Asset not found' } });
+    });
+
     app.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith('/api/') || request.url.startsWith('/auth/')) {
-        reply.status(404).send({
-          error: { code: 'NOT_FOUND', message: 'Route not found' },
-        });
+      if (request.url.startsWith('/api/') || request.url.startsWith('/auth/') || request.url.startsWith('/health')) {
+        reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Route not found' } });
       } else {
-        reply.sendFile('index.html');
+        const file = serveDashboard(request.url.slice(1)) ?? serveDashboard('index.html');
+        if (file !== null) return reply.status(200).headers(file.headers).send(file.body);
+        reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } });
       }
     });
   }
