@@ -109,9 +109,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     reply.clearCookie('oauth_state');
 
     return reply.redirect(
-      env.NODE_ENV === 'production'
+      env.DASHBOARD_URL ?? (env.NODE_ENV === 'production'
         ? 'https://your-dashboard.pages.dev/dashboard'
-        : 'http://localhost:5173/dashboard',
+        : 'http://localhost:5173/dashboard'),
     );
   });
 

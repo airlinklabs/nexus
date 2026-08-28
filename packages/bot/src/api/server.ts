@@ -25,8 +25,9 @@ export async function createServer() {
   await app.register(cookie, { secret: env.API_SECRET });
 
   await app.register(cors, {
-    origin:
-      env.NODE_ENV === 'production'
+    origin: env.DASHBOARD_URL !== undefined
+      ? [env.DASHBOARD_URL]
+      : env.NODE_ENV === 'production'
         ? ['https://your-dashboard.pages.dev']
         : ['http://localhost:5173'],
     credentials: true,

@@ -12,7 +12,7 @@ export type SessionPayload = {
   readonly accessToken: string;
 };
 
-export async function signSession(payload: SessionPayload): Promise<string> {
+export function signSession(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload as unknown as JWTPayload)
     .setProtectedHeader({ alg: ALGORITHM })
     .setIssuedAt()

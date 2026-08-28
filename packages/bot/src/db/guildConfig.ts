@@ -11,6 +11,14 @@ export type GuildConfig = {
   readonly defaultExpiry: number | null;
 };
 
+function safeJsonParse<T>(json: string, fallback: T): T {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getGuildConfig(guildId: string): Promise<GuildConfig> {
   const row = await db.query.guilds.findFirst({
     where: eq(guilds.guildId, guildId),
@@ -28,8 +36,8 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig> {
 
   return {
     guildId: row.guildId,
-    trustedDomains: JSON.parse(row.trustedDomains) as string[],
-    commandRoles: JSON.parse(row.commandRoles) as Record<string, RoleId[]>,
+    trustedDomains: safeJsonParse<string[]>(row.trustedDomains, []),
+    commandRoles: safeJsonParse<Record<string, RoleId[]>>(row.commandRoles, {}),
     auditChannelId: row.auditChannelId ?? null,
     defaultExpiry: row.defaultExpiry ?? null,
   };

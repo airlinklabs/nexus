@@ -146,7 +146,7 @@ export function GuildListPage() {
               Make sure Nexus is invited to a server you administrate.
             </p>
             <a
-              href="https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=8"
+              href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&scope=bot&permissions=8`}
               target="_blank"
               rel="noopener noreferrer"
               style={{

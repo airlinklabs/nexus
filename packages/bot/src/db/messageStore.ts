@@ -5,6 +5,14 @@ import { evaluateDefinition } from '../engine/sandbox.js';
 import { loadRemoteDefinition } from '../engine/remoteLoader.js';
 import type { StoredMessage, UIDefinition, UserId } from 'shared/ui-types';
 
+function safeJsonParse<T>(json: string, fallback: T): T {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 async function hydrateDefinition(
   source: string,
   definitionJson: string,
@@ -20,7 +28,7 @@ async function hydrateDefinition(
 
   if (!result.ok) return null;
 
-  const stored = JSON.parse(definitionJson) as Partial<UIDefinition>;
+  const stored = safeJsonParse<Partial<UIDefinition>>(definitionJson, {});
   return {
     ...stored,
     ...result.definition,
@@ -64,7 +72,7 @@ export async function getMessage(messageId: string): Promise<StoredMessage | nul
     guildId: row.guildId,
     callerId: row.callerId as UserId,
     definition,
-    state: JSON.parse(row.stateJson) as Record<string, unknown>,
+    state: safeJsonParse<Record<string, unknown>>(row.stateJson, {}),
     expiresAt: row.expiresAt !== null ? row.expiresAt.getTime() : null,
   };
 }
@@ -79,7 +87,7 @@ export async function updateState(
 
   if (row === undefined) return false;
 
-  const prev = JSON.parse(row.stateJson) as Record<string, unknown>;
+  const prev = safeJsonParse<Record<string, unknown>>(row.stateJson, {});
   const next = updater(prev);
 
   await db
@@ -103,7 +111,7 @@ export async function purgeExpired(): Promise<ReadonlyArray<{ messageId: string;
   const results = expired.map((row) => ({
     messageId: row.messageId,
     channelId: row.channelId,
-    state: JSON.parse(row.stateJson) as Record<string, unknown>,
+    state: safeJsonParse<Record<string, unknown>>(row.stateJson, {}),
   }));
 
   await db.delete(activeMessages).where(lt(activeMessages.expiresAt, now));

@@ -13,6 +13,7 @@ const envSchema = z.object({
   API_SECRET: z.string().min(32),
   API_BASE_URL: z.string().url(),
   DATABASE_PATH: z.string().optional(),
+  DASHBOARD_URL: z.string().url().optional(),
 });
 
 // Throws at startup if any required variable is missing or malformed.
