@@ -2,11 +2,14 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sessionMiddleware, requireSession } from '../middleware/session.js';
 import { getGuildConfig, addTrustedDomain, removeTrustedDomain, setCommandRoles, setGlobalRole } from '../../db/guildConfig.js';
+import { env } from '../../env.js';
 import type { RoleId } from 'shared/ui-types';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
-async function fetchAdminGuilds(accessToken: string): Promise<Array<{ id: string; name: string; icon: string | null }>> {
+type DiscordGuild = { id: string; name: string; icon: string | null };
+
+async function fetchUserGuilds(accessToken: string): Promise<ReadonlyArray<DiscordGuild>> {
   const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -16,10 +19,48 @@ async function fetchAdminGuilds(accessToken: string): Promise<Array<{ id: string
     id: string;
     name: string;
     icon: string | null;
-    permissions: string;
   }>;
 
-  return all.filter((g) => (BigInt(g.permissions) & 0x8n) !== 0n);
+  return all;
+}
+
+let botGuildsCache: ReadonlyArray<DiscordGuild> = [];
+let botGuildsCacheExpiry = 0;
+
+async function fetchBotGuilds(): Promise<ReadonlyArray<DiscordGuild>> {
+  if (Date.now() < botGuildsCacheExpiry && botGuildsCache.length > 0) {
+    return botGuildsCache;
+  }
+
+  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+    headers: { Authorization: `Bot ${env.DISCORD_TOKEN}` },
+  });
+  if (!res.ok) return botGuildsCache;
+
+  const all = await res.json() as Array<{
+    id: string;
+    name: string;
+    icon: string | null;
+  }>;
+
+  botGuildsCache = all;
+  botGuildsCacheExpiry = Date.now() + 5 * 60 * 1000;
+  return botGuildsCache;
+}
+
+async function fetchSharedGuilds(accessToken: string): Promise<ReadonlyArray<DiscordGuild>> {
+  const [userGuilds, botGuilds] = await Promise.all([
+    fetchUserGuilds(accessToken),
+    fetchBotGuilds(),
+  ]);
+
+  const botGuildIds = new Set(botGuilds.map((g) => g.id));
+  return userGuilds.filter((g) => botGuildIds.has(g.id));
+}
+
+async function isGuildMember(accessToken: string, guildId: string): Promise<boolean> {
+  const shared = await fetchSharedGuilds(accessToken);
+  return shared.some((g) => g.id === guildId);
 }
 
 async function fetchGuildRoles(accessToken: string, guildId: string): Promise<Array<{ id: string; name: string; color: number; position: number }>> {
@@ -38,11 +79,6 @@ async function fetchGuildRoles(accessToken: string, guildId: string): Promise<Ar
   return roles
     .filter((r) => r.name !== '@everyone')
     .sort((a, b) => b.position - a.position);
-}
-
-async function assertGuildAdmin(accessToken: string, guildId: string): Promise<boolean> {
-  const guilds = await fetchAdminGuilds(accessToken);
-  return guilds.some((g) => g.id === guildId);
 }
 
 const guildIdSchema = z.object({ guildId: z.string() });
@@ -64,8 +100,8 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async (request, reply) => {
     const session = request.session!;
-    const adminGuilds = await fetchAdminGuilds(session.accessToken);
-    return reply.send({ guilds: adminGuilds });
+    const sharedGuilds = await fetchSharedGuilds(session.accessToken);
+    return reply.send({ guilds: sharedGuilds });
   });
 
   app.get('/:guildId', async (request, reply) => {
@@ -76,15 +112,18 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
       });
     }
     const { guildId } = parsed.data;
-    const adminGuilds = await fetchAdminGuilds(request.session!.accessToken);
-    const guild = adminGuilds.find((g) => g.id === guildId);
-    if (guild === undefined) {
+
+    const isMember = await isGuildMember(request.session!.accessToken, guildId);
+    if (!isMember) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+        error: { code: 'FORBIDDEN', message: 'The bot is not in that server.' },
       });
     }
+
+    const sharedGuilds = await fetchSharedGuilds(request.session!.accessToken);
+    const guild = sharedGuilds.find((g) => g.id === guildId);
     const config = await getGuildConfig(guildId);
-    return reply.send({ config, guild });
+    return reply.send({ config, guild: guild ?? { id: guildId, name: 'Unknown Server', icon: null } });
   });
 
   app.get('/:guildId/roles', async (request, reply) => {
@@ -95,12 +134,14 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
       });
     }
     const { guildId } = parsed.data;
-    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
-    if (!isAdmin) {
+
+    const isMember = await isGuildMember(request.session!.accessToken, guildId);
+    if (!isMember) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+        error: { code: 'FORBIDDEN', message: 'The bot is not in that server.' },
       });
     }
+
     const roles = await fetchGuildRoles(request.session!.accessToken, guildId);
     return reply.send({ roles });
   });
@@ -121,10 +162,10 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
     const { guildId } = paramsParsed.data;
     const { action, domain } = bodyParsed.data;
 
-    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
-    if (!isAdmin) {
+    const isMember = await isGuildMember(request.session!.accessToken, guildId);
+    if (!isMember) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+        error: { code: 'FORBIDDEN', message: 'The bot is not in that server.' },
       });
     }
 
@@ -153,10 +194,10 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
     const { guildId } = paramsParsed.data;
     const { commandName, roleIds } = bodyParsed.data;
 
-    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
-    if (!isAdmin) {
+    const isMember = await isGuildMember(request.session!.accessToken, guildId);
+    if (!isMember) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+        error: { code: 'FORBIDDEN', message: 'The bot is not in that server.' },
       });
     }
 
@@ -180,10 +221,10 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
     const { guildId } = paramsParsed.data;
     const { roleId } = bodyParsed.data;
 
-    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
-    if (!isAdmin) {
+    const isMember = await isGuildMember(request.session!.accessToken, guildId);
+    if (!isMember) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+        error: { code: 'FORBIDDEN', message: 'The bot is not in that server.' },
       });
     }
 

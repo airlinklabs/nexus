@@ -13,6 +13,7 @@ import { handleReload } from './reload.js';
 import { handleDelete } from './delete.js';
 import { handleUse } from './use.js';
 import { handleTemplates } from './templates.js';
+import { handleFile } from './file.js';
 
 const SUBCOMMAND_HANDLERS: Record<
   string,
@@ -30,6 +31,7 @@ const SUBCOMMAND_HANDLERS: Record<
   delete: handleDelete,
   use: handleUse,
   templates: handleTemplates,
+  file: handleFile,
 };
 
 export const command: SlashCommand = {
@@ -152,6 +154,20 @@ export const command: SlashCommand = {
       sub
         .setName('templates')
         .setDescription('List available templates for this server'),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('file')
+        .setDescription('Load and send a UI definition from a URL')
+        .addStringOption((opt) =>
+          opt.setName('url').setDescription('URL to a JS file with a module.exports definition').setRequired(true),
+        )
+        .addIntegerOption((opt) =>
+          opt.setName('expires-in').setDescription('Disable components after this many seconds').setRequired(false),
+        )
+        .addBooleanOption((opt) =>
+          opt.setName('ephemeral').setDescription('Only you can see the message').setRequired(false),
+        ),
     ),
 
   async execute(interaction) {
