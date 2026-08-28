@@ -153,3 +153,5 @@ vite.config.ts.timestamp-*
 .env
 .tmp/
 .desloppify/session-*.md
+session-*.md
+.desloppify/

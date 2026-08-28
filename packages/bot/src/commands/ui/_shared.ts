@@ -84,11 +84,15 @@ export async function sendUI(
   const messageOptions = buildMessageOptions(definition);
   const ephemeral = opts.ephemeral || (definition.meta.ephemeral ?? false);
 
-  const reply = await interaction.reply({
-    ...messageOptions,
-    ephemeral,
-    fetchReply: true,
-  });
+  const replied = interaction.replied || interaction.deferred;
+
+  const reply = replied
+    ? await interaction.editReply(messageOptions)
+    : await interaction.reply({
+        ...messageOptions,
+        ephemeral,
+        fetchReply: true,
+      });
 
   const expiresInSeconds = opts.expiresInSeconds ?? definition.meta.expiresInSeconds ?? null;
   const guildId = interaction.guildId ?? 'dm';
