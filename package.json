@@ -1,0 +1,19 @@
+{
+  "name": "nexus",
+  "private": true,
+  "scripts": {
+    "dev:bot": "pnpm --filter bot dev",
+    "build:bot": "pnpm --filter bot build",
+    "deploy:commands": "pnpm --filter bot deploy:commands"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  }
+}
