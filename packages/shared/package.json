@@ -5,7 +5,11 @@
   "type": "module",
   "exports": {
     "./slash-command": "./src/slash-command.ts",
-    "./ui-types": "./src/ui-types.ts"
+    "./ui-types": "./src/ui-types.ts",
+    "./api-errors": "./src/apiErrors.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

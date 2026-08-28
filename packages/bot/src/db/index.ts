@@ -3,11 +3,12 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { env } from '../env.js';
 import * as schema from './schema.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const DB_PATH = process.env['DATABASE_PATH'] ?? join(__dirname, '../../../nexus.db');
+const DB_PATH = env.DATABASE_PATH ?? join(__dirname, '../../../nexus.db');
 
 const sqlite = new Database(DB_PATH);
 sqlite.pragma('journal_mode = WAL');

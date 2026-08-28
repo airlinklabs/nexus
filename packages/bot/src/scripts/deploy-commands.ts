@@ -1,6 +1,9 @@
 import { REST, Routes } from 'discord.js';
 import { env } from '../env.js';
 import { loadCommands } from '../commands/index.js';
+import { logger } from '../logger.js';
+
+const deployLogger = logger.child({ module: 'deploy' });
 
 async function deploy(): Promise<void> {
   const commands = await loadCommands();
@@ -13,13 +16,13 @@ async function deploy(): Promise<void> {
     : Routes.applicationCommands(env.DISCORD_CLIENT_ID);
 
   const target = env.GUILD_ID !== undefined ? 'guild' : 'global';
-  console.log(`[deploy] Registering ${bodies.length} command(s) (${target})…`);
+  deployLogger.info({ count: bodies.length, target }, 'Registering commands');
 
   await rest.put(route, { body: bodies });
-  console.log('[deploy] Done.');
+  deployLogger.info('Done');
 }
 
 deploy().catch((error: unknown) => {
-  console.error('[deploy] Failed:', error);
+  deployLogger.error({ err: error }, 'Failed');
   process.exit(1);
 });

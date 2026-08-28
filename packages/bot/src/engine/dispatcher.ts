@@ -7,6 +7,8 @@ import type {
 import { getMessage } from '../db/messageStore.js';
 import { checkComponentPermission, denialMessage } from '../permissions/index.js';
 import { logInteraction } from '../db/interactionLog.js';
+import { checkCooldown, setCooldown } from './cooldown.js';
+import { dbLogger } from '../logger.js';
 import type { UserId } from 'shared/ui-types';
 
 type DispatchableInteraction =
@@ -50,7 +52,7 @@ export async function dispatch(interaction: DispatchableInteraction): Promise<vo
     componentId,
     componentType,
     outcome: permResult.allowed ? 'allowed' : `denied:${permResult.reason}`,
-  }).catch((err: unknown) => console.error('[nexus] Log interaction error:', err));
+  }).catch((err: unknown) => dbLogger.error({ err }, 'Log interaction error'));
 
   if (!permResult.allowed) {
     await interaction.reply({
@@ -68,11 +70,29 @@ export async function dispatch(interaction: DispatchableInteraction): Promise<vo
     const handler = handlers?.buttons?.[id];
     if (handler === undefined) return;
 
+    const cooldownResult = checkCooldown(callerId, messageId, id);
+    if (cooldownResult.onCooldown) {
+      await interaction.reply({
+        content: `Wait ${cooldownResult.remainingSeconds}s before using this again.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
     await handler({
       interaction,
       state: stored.state,
       callerId,
     });
+
+    const def = stored.definition;
+    const allButtons = (def.components ?? []).flat();
+    const btnDef = allButtons.find(
+      (c) => c.type === 'button' && c.id === id,
+    );
+    if (btnDef !== undefined && 'cooldownSeconds' in btnDef && btnDef.cooldownSeconds !== undefined) {
+      setCooldown(callerId, messageId, id, btnDef.cooldownSeconds);
+    }
     return;
   }
 
@@ -81,12 +101,30 @@ export async function dispatch(interaction: DispatchableInteraction): Promise<vo
     const handler = handlers?.selects?.[id];
     if (handler === undefined) return;
 
+    const cooldownResult = checkCooldown(callerId, messageId, id);
+    if (cooldownResult.onCooldown) {
+      await interaction.reply({
+        content: `Wait ${cooldownResult.remainingSeconds}s before using this again.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
     await handler({
       interaction,
       values: interaction.values,
       state: stored.state,
       callerId,
     });
+
+    const def = stored.definition;
+    const allSelects = (def.components ?? []).flat();
+    const selectDef = allSelects.find(
+      (c) => c.type === 'select' && c.id === id,
+    );
+    if (selectDef !== undefined && 'cooldownSeconds' in selectDef && selectDef.cooldownSeconds !== undefined) {
+      setCooldown(callerId, messageId, id, selectDef.cooldownSeconds);
+    }
     return;
   }
 

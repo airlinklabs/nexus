@@ -4,7 +4,9 @@
   "scripts": {
     "dev:bot": "pnpm --filter bot dev",
     "build:bot": "pnpm --filter bot build",
-    "deploy:commands": "pnpm --filter bot deploy:commands"
+    "deploy:commands": "pnpm --filter bot deploy:commands",
+    "test": "pnpm --filter bot test",
+    "test:watch": "pnpm --filter bot test:watch"
   },
   "engines": {
     "node": ">=20.0.0",

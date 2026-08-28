@@ -29,6 +29,7 @@ export type ButtonDef = {
   readonly disabled?: boolean;
   readonly url?: string;
   readonly allowedBy?: PermissionTarget;
+  readonly cooldownSeconds?: number;
 };
 
 export type SelectOptionDef = {
@@ -47,6 +48,7 @@ export type SelectMenuDef = {
   readonly maxValues?: number;
   readonly options: ReadonlyArray<SelectOptionDef>;
   readonly allowedBy?: PermissionTarget;
+  readonly cooldownSeconds?: number;
 };
 
 export type ModalFieldDef = {
@@ -137,4 +139,25 @@ export type StoredMessage = {
   readonly definition: UIDefinition;
   readonly state: Record<string, unknown>;
   readonly expiresAt: number | null;
+};
+
+// ─── Poll types ───────────────────────────────────────────────────────────────
+
+export type PollVote = {
+  readonly userId: string;
+  readonly optionValue: string;
+  readonly votedAt: number;
+};
+
+export type PollState = {
+  readonly __type: 'poll';
+  readonly votes: ReadonlyArray<PollVote>;
+  readonly closed: boolean;
+};
+
+export type PollMeta = UIDefinitionMeta & {
+  readonly allowMultipleVotes?: boolean;
+  readonly showVoterCount?: boolean;
+  readonly showPercentages?: boolean;
+  readonly anonymous?: boolean;
 };

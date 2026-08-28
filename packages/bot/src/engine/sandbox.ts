@@ -16,6 +16,29 @@ const SANDBOX_GLOBALS = {
   isFinite,
   encodeURIComponent,
   decodeURIComponent,
+  embedBuilder: {
+    create(options: {
+      title?: string;
+      description?: string;
+      color?: number;
+      fields?: Array<{ name: string; value: string; inline?: boolean }>;
+      footer?: string;
+      thumbnail?: string;
+      image?: string;
+      timestamp?: boolean;
+    }) {
+      return {
+        title: options.title,
+        description: options.description,
+        color: options.color,
+        fields: options.fields ?? [],
+        footer: options.footer !== undefined ? { text: options.footer } : undefined,
+        thumbnail: options.thumbnail !== undefined ? { url: options.thumbnail } : undefined,
+        image: options.image !== undefined ? { url: options.image } : undefined,
+        timestamp: options.timestamp === true ? new Date().toISOString() : undefined,
+      };
+    },
+  },
 } as const;
 
 export type SandboxResult =

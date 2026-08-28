@@ -32,3 +32,15 @@ export const interactionLog = sqliteTable('interaction_log', {
   outcome: text('outcome').notNull(),
   occurredAt: integer('occurred_at', { mode: 'timestamp' }).notNull(),
 });
+
+export const panels = sqliteTable('panels', {
+  panelId: text('panel_id').primaryKey(),
+  guildId: text('guild_id').notNull(),
+  channelId: text('channel_id').notNull(),
+  messageId: text('message_id'),
+  definitionSource: text('definition_source').notNull(),
+  definitionJson: text('definition_json').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

@@ -11,6 +11,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().min(1024).max(65535).default(3001),
   API_SECRET: z.string().min(32),
+  API_BASE_URL: z.string().url(),
   DATABASE_PATH: z.string().optional(),
 });
 

@@ -1,5 +1,6 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { parseCommonOptions, resolveDefinition, sendUI, checkAndReply } from './_shared.js';
+import { wrapPollDefinition } from '../../engine/pollEngine.js';
 
 export async function handlePoll(interaction: ChatInputCommandInteraction): Promise<void> {
   const allowed = await checkAndReply(interaction);
@@ -15,5 +16,6 @@ export async function handlePoll(interaction: ChatInputCommandInteraction): Prom
     return;
   }
 
-  await sendUI(interaction, definition, opts);
+  const wrappedDefinition = wrapPollDefinition(definition);
+  await sendUI(interaction, wrappedDefinition, opts);
 }

@@ -9,6 +9,8 @@ import { handlePoll } from './poll.js';
 import { handleEmbed } from './embed.js';
 import { handleWizard } from './wizard.js';
 import { handlePanel } from './panel.js';
+import { handleReload } from './reload.js';
+import { handleDelete } from './delete.js';
 
 const SUBCOMMAND_HANDLERS: Record<
   string,
@@ -22,6 +24,8 @@ const SUBCOMMAND_HANDLERS: Record<
   embed: handleEmbed,
   wizard: handleWizard,
   panel: handlePanel,
+  reload: handleReload,
+  delete: handleDelete,
 };
 
 export const command: SlashCommand = {
@@ -108,6 +112,25 @@ export const command: SlashCommand = {
         .setDescription('Send a persistent panel that never expires (ticket panel, role selector, etc.)')
         .addStringOption((opt) =>
           opt.setName('definition').setDescription('JS definition object or https:// URL').setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('name').setDescription('Unique panel name within this server').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('reload')
+        .setDescription('Force-reload a cached remote definition URL')
+        .addStringOption((opt) =>
+          opt.setName('url').setDescription('The remote URL to reload').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('delete')
+        .setDescription('Remove an active UI message and disable its components')
+        .addStringOption((opt) =>
+          opt.setName('message-id').setDescription('ID of the message to delete').setRequired(true),
         ),
     ),
 

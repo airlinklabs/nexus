@@ -1,1 +1,17 @@
-// Placeholder — dashboard will be built in Part 5
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { App } from './App.js';
+import './styles/tokens.css';
+import './styles/global.css';
+
+const root = document.getElementById('root');
+if (root === null) throw new Error('Root element not found');
+
+createRoot(root).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>,
+);

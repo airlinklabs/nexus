@@ -94,6 +94,19 @@ export async function deleteMessage(messageId: string): Promise<void> {
   await db.delete(activeMessages).where(eq(activeMessages.messageId, messageId));
 }
 
-export async function purgeExpired(): Promise<void> {
-  await db.delete(activeMessages).where(lt(activeMessages.expiresAt, new Date()));
+export async function purgeExpired(): Promise<ReadonlyArray<{ messageId: string; channelId: string; state: Record<string, unknown> }>> {
+  const now = new Date();
+  const expired = await db.query.activeMessages.findMany({
+    where: lt(activeMessages.expiresAt, now),
+  });
+
+  const results = expired.map((row) => ({
+    messageId: row.messageId,
+    channelId: row.channelId,
+    state: JSON.parse(row.stateJson) as Record<string, unknown>,
+  }));
+
+  await db.delete(activeMessages).where(lt(activeMessages.expiresAt, now));
+
+  return results;
 }
