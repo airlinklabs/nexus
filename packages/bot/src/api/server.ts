@@ -2,11 +2,17 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { env } from '../env.js';
 import { healthRoute } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { guildRoutes } from './routes/guilds.js';
 import { messageRoutes } from './routes/messages.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function createServer() {
   const app = Fastify({ logger: env.NODE_ENV === 'development' });
@@ -37,6 +43,27 @@ export async function createServer() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(guildRoutes, { prefix: '/api/guilds' });
   await app.register(messageRoutes, { prefix: '/api/messages' });
+
+  // Serve dashboard in production
+  const dashboardDist = join(__dirname, '../../../dashboard/dist');
+  if (env.NODE_ENV === 'production' && existsSync(dashboardDist)) {
+    await app.register(fastifyStatic, {
+      root: dashboardDist,
+      prefix: '/',
+      decorateReply: false,
+    });
+
+    // SPA fallback - serve index.html for non-API routes
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith('/api/') || request.url.startsWith('/auth/')) {
+        reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: 'Route not found' },
+        });
+      } else {
+        reply.sendFile('index.html');
+      }
+    });
+  }
 
   return app;
 }

@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm build:bot"
+buildCommand = "pnpm install --frozen-lockfile && pnpm build:bot && pnpm --filter dashboard build"
 
 [deploy]
 startCommand = "node packages/bot/dist/index.js"

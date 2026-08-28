@@ -3,7 +3,10 @@
   "private": true,
   "scripts": {
     "dev:bot": "pnpm --filter bot dev",
+    "dev:dashboard": "pnpm --filter dashboard dev",
     "build:bot": "pnpm --filter bot build",
+    "build:dashboard": "pnpm --filter dashboard build",
+    "build": "pnpm build:bot && pnpm build:dashboard",
     "deploy:commands": "pnpm --filter bot deploy:commands",
     "test": "pnpm --filter bot test",
     "test:watch": "pnpm --filter bot test:watch"
