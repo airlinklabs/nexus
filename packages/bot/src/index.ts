@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { client } from './client.js';
 import { env } from './env.js';
 import { loadCommands } from './commands/index.js';
+import { dispatch } from './engine/dispatcher.js';
 
 async function main(): Promise<void> {
   const commands = await loadCommands();
@@ -11,6 +12,15 @@ async function main(): Promise<void> {
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
+    if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+      try {
+        await dispatch(interaction);
+      } catch (error) {
+        console.error('[nexus] Dispatch error:', error);
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const command = commands.get(interaction.commandName);

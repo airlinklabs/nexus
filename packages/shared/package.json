@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./slash-command": "./src/slash-command.ts"
+    "./slash-command": "./src/slash-command.ts",
+    "./ui-types": "./src/ui-types.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

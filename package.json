@@ -2,8 +2,6 @@
   "name": "nexus",
   "private": true,
   "scripts": {
-    "start": "node packages/bot/dist/index.js",
-    "build": "pnpm build:bot",
     "dev:bot": "pnpm --filter bot dev",
     "build:bot": "pnpm --filter bot build",
     "deploy:commands": "pnpm --filter bot deploy:commands"
@@ -17,8 +15,5 @@
       "better-sqlite3",
       "esbuild"
     ]
-  },
-  "devDependencies": {
-    "railway": "^3.11.0"
   }
 }
