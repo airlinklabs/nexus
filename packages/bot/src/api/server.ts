@@ -71,7 +71,28 @@ export async function createServer() {
   await app.register(guildRoutes, { prefix: '/api/guilds' });
   await app.register(messageRoutes, { prefix: '/api/messages' });
 
+  const DEFS_DIST = join(__dirname, '../../../static/definitions');
+
+function serveDef(filePath: string): { status: number; body: Buffer | string; headers: Record<string, string> } | null {
+  const fullPath = join(DEFS_DIST, filePath);
+  if (existsSync(fullPath) && statSync(fullPath).isFile()) {
+    return {
+      status: 200,
+      body: readFileSync(fullPath),
+      headers: { 'content-type': 'text/plain' },
+    };
+  }
+  return null;
+}
+
   if (env.NODE_ENV === 'production' && existsSync(DASHBOARD_DIST)) {
+    app.get('/defs/*', async (req, reply) => {
+      const filePath = req.url.replace(/^\/defs\//, '');
+      const file = serveDef(filePath);
+      if (file !== null) return reply.status(200).headers(file.headers).send(file.body);
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Definition not found' } });
+    });
+
     app.get('/', async (_req, reply) => {
       const file = serveDashboard('index.html');
       if (file !== null) return reply.status(200).headers(file.headers).send(file.body);
