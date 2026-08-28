@@ -3,8 +3,18 @@ import { client } from './client.js';
 import { env } from './env.js';
 import { loadCommands } from './commands/index.js';
 import { dispatch } from './engine/dispatcher.js';
+import { runMigrations } from './db/index.js';
+import { purgeExpired } from './db/messageStore.js';
 
 async function main(): Promise<void> {
+  runMigrations();
+
+  setInterval(() => {
+    purgeExpired().catch((err: unknown) =>
+      console.error('[nexus] Purge error:', err),
+    );
+  }, 10 * 60 * 1000);
+
   const commands = await loadCommands();
 
   client.once(Events.ClientReady, (readyClient) => {

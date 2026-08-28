@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { parseCommonOptions, resolveDefinition } from './_shared.js';
+import { parseCommonOptions, resolveDefinition, checkAndReply } from './_shared.js';
 import { buildPageOptions } from '../../engine/components.js';
-import { storeMessage } from '../../engine/stateStore.js';
+import { storeMessage } from '../../db/messageStore.js';
 import type { StoredMessage, UIDefinition, UserId } from 'shared/ui-types';
 
 function toPageNumber(value: unknown): number {
@@ -10,6 +10,9 @@ function toPageNumber(value: unknown): number {
 }
 
 export async function handleWizard(interaction: ChatInputCommandInteraction): Promise<void> {
+  const allowed = await checkAndReply(interaction);
+  if (!allowed) return;
+
   await interaction.deferReply({ ephemeral: false });
 
   const opts = parseCommonOptions(interaction);
@@ -60,5 +63,5 @@ export async function handleWizard(interaction: ChatInputCommandInteraction): Pr
     expiresAt: opts.expiresInSeconds !== null ? Date.now() + opts.expiresInSeconds * 1000 : null,
   };
 
-  storeMessage(stored);
+  await storeMessage(stored, opts.definitionRaw);
 }

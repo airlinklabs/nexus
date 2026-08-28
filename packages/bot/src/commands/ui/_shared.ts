@@ -1,8 +1,10 @@
-import type { ChatInputCommandInteraction } from 'discord.js';
+import type { ChatInputCommandInteraction, GuildMember } from 'discord.js';
 import { evaluateDefinition } from '../../engine/sandbox.js';
 import { loadRemoteDefinition } from '../../engine/remoteLoader.js';
 import { buildMessageOptions } from '../../engine/components.js';
-import { storeMessage } from '../../engine/stateStore.js';
+import { storeMessage } from '../../db/messageStore.js';
+import { checkCommandPermission, denialMessage } from '../../permissions/index.js';
+import { getGuildConfig } from '../../db/guildConfig.js';
 import type { UIDefinition, UserId, RoleId, StoredMessage } from 'shared/ui-types';
 
 export type ParsedOptions = {
@@ -31,13 +33,14 @@ export function parseCommonOptions(
 
 export async function resolveDefinition(
   raw: string,
-  _guildId: string,
+  guildId: string,
 ): Promise<UIDefinition | string> {
   const isUrl = raw.startsWith('https://') || raw.startsWith('http://');
 
   if (isUrl) {
-    const defaultTrusted = ['raw.githubusercontent.com', 'gist.githubusercontent.com'];
-    const result = await loadRemoteDefinition(raw, defaultTrusted);
+    const { getGuildConfig: getCfg } = await import('../../db/guildConfig.js');
+    const config = await getCfg(guildId);
+    const result = await loadRemoteDefinition(raw, config.trustedDomains);
     if (!result.ok) return result.error;
     return result.definition;
   }
@@ -45,6 +48,32 @@ export async function resolveDefinition(
   const result = evaluateDefinition(raw);
   if (!result.ok) return result.error;
   return result.definition;
+}
+
+export async function checkAndReply(
+  interaction: ChatInputCommandInteraction,
+): Promise<boolean> {
+  const guildId = interaction.guildId;
+  if (guildId === null) {
+    await interaction.reply({ content: 'Nexus commands cannot be used in DMs.', ephemeral: true });
+    return false;
+  }
+
+  const guildConfig = await getGuildConfig(guildId);
+  const member = interaction.member as GuildMember;
+  const subcommand = interaction.options.getSubcommand(true);
+  const permResult = checkCommandPermission(
+    `ui ${subcommand}`,
+    member,
+    guildConfig,
+  );
+
+  if (!permResult.allowed) {
+    await interaction.reply({ content: denialMessage(permResult.reason), ephemeral: true });
+    return false;
+  }
+
+  return true;
 }
 
 export async function sendUI(
@@ -62,16 +91,17 @@ export async function sendUI(
   });
 
   const expiresInSeconds = opts.expiresInSeconds ?? definition.meta.expiresInSeconds ?? null;
+  const guildId = interaction.guildId ?? 'dm';
 
   const stored: StoredMessage = {
     messageId: reply.id,
     channelId: interaction.channelId,
-    guildId: interaction.guildId ?? 'dm',
+    guildId,
     callerId: interaction.user.id as UserId,
     definition,
     state: definition.initialState ?? {},
     expiresAt: expiresInSeconds !== null ? Date.now() + expiresInSeconds * 1000 : null,
   };
 
-  storeMessage(stored);
+  await storeMessage(stored, opts.definitionRaw);
 }

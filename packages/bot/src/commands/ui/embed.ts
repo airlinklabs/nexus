@@ -1,7 +1,10 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { parseCommonOptions, resolveDefinition, sendUI } from './_shared.js';
+import { parseCommonOptions, resolveDefinition, sendUI, checkAndReply } from './_shared.js';
 
 export async function handleEmbed(interaction: ChatInputCommandInteraction): Promise<void> {
+  const allowed = await checkAndReply(interaction);
+  if (!allowed) return;
+
   await interaction.deferReply({ ephemeral: false });
 
   const opts = parseCommonOptions(interaction);
