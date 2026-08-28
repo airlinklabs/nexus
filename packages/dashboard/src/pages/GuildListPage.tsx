@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError, type Guild } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.js';
+import { Card, Button, EmptyState, SkeletonCard } from '../components/ui/index.js';
 
 export function GuildListPage() {
   const { auth, logout } = useAuth();
@@ -70,100 +71,52 @@ export function GuildListPage() {
                 {user.username}
               </span>
             </div>
-            <button
-              onClick={() => {
-                void logout();
-              }}
-              style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--ink-low)',
-                padding: 'var(--space-1) var(--space-2)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
+            <Button variant="ghost" size="sm" onClick={() => void logout()}>
               Log out
-            </button>
+            </Button>
           </div>
         )}
       </header>
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
-        <h2
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 600,
-            marginBottom: 'var(--space-6)',
-          }}
-        >
+        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
           Your servers
-        </h2>
+        </h1>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-mid)', marginBottom: 'var(--space-6)' }}>
+          Select a server to configure Nexus.
+        </p>
 
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                style={{
-                  height: 56,
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border)',
-                }}
-              />
+              <SkeletonCard key={i} />
             ))}
           </div>
         )}
 
         {error !== null && (
-          <div
-            style={{
-              padding: 'var(--space-4)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger)',
-              fontSize: 'var(--text-sm)',
-            }}
-          >
-            {error}
-          </div>
+          <Card>
+            <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)' }}>{error}</p>
+          </Card>
         )}
 
         {!loading && error === null && guilds.length === 0 && (
-          <div
-            style={{
-              padding: 'var(--space-8)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border)',
-              textAlign: 'center',
-              color: 'var(--ink-mid)',
-              fontSize: 'var(--text-sm)',
-            }}
-          >
-            <p>No servers found.</p>
-            <p style={{ marginTop: 'var(--space-2)' }}>
-              Make sure Nexus is invited to a server you administrate.
-            </p>
-            <a
-              href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&scope=bot&permissions=8`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-block',
-                marginTop: 'var(--space-4)',
-                padding: 'var(--space-2) var(--space-4)',
-                background: 'var(--accent)',
-                color: 'var(--bg-base)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 500,
-                textDecoration: 'none',
-              }}
-            >
-              Invite Nexus to your server
-            </a>
-          </div>
+          <Card>
+            <EmptyState
+              title="No servers found"
+              description="Make sure Nexus is invited to a server you administrate."
+              action={
+                <a
+                  href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&scope=bot&permissions=8`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Button>Invite Nexus to your server</Button>
+                </a>
+              }
+            />
+          </Card>
         )}
 
         {!loading && error === null && guilds.length > 0 && (
@@ -172,60 +125,50 @@ export function GuildListPage() {
               <Link
                 key={guild.id}
                 to={`/dashboard/${guild.id}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  padding: 'var(--space-4)',
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border)',
-                  textDecoration: 'none',
-                  color: 'var(--ink-high)',
-                  transition: 'border-color var(--duration-fast) var(--ease-out)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                }}
+                style={{ textDecoration: 'none' }}
               >
-                {guild.icon !== null ? (
-                  <img
-                    src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`}
-                    alt=""
-                    width={32}
-                    height={32}
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--bg-elevated)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--ink-low)',
-                    }}
-                  >
-                    {guild.name.charAt(0)}
-                  </div>
-                )}
-                <span style={{ flex: 1, fontWeight: 500 }}>{guild.name}</span>
-                <span
+                <Card
+                  padding="md"
                   style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--ink-faint)',
+                    cursor: 'pointer',
+                    transition: 'border-color var(--duration-fast) var(--ease-out)',
                   }}
                 >
-                  Configure →
-                </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    {guild.icon !== null ? (
+                      <img
+                        src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`}
+                        alt=""
+                        width={36}
+                        height={36}
+                        style={{ borderRadius: 'var(--radius-sm)' }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'var(--bg-elevated)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--ink-low)',
+                        }}
+                      >
+                        {guild.name.charAt(0)}
+                      </div>
+                    )}
+                    <span style={{ flex: 1, fontWeight: 500, color: 'var(--ink-high)' }}>
+                      {guild.name}
+                    </span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
+                      Configure →
+                    </span>
+                  </div>
+                </Card>
               </Link>
             ))}
           </div>

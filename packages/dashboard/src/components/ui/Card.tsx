@@ -4,6 +4,7 @@ type CardProps = {
   readonly children: ReactNode;
   readonly className?: string;
   readonly padding?: 'sm' | 'md' | 'lg';
+  readonly style?: React.CSSProperties;
 };
 
 const PAD_MAP = {
@@ -12,7 +13,7 @@ const PAD_MAP = {
   lg: 'var(--space-6)',
 };
 
-export function Card({ children, className, padding = 'md' }: CardProps) {
+export function Card({ children, className, padding = 'md', style }: CardProps) {
   return (
     <div
       className={className}
@@ -21,6 +22,7 @@ export function Card({ children, className, padding = 'md' }: CardProps) {
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border)',
         padding: PAD_MAP[padding],
+        ...style,
       }}
     >
       {children}

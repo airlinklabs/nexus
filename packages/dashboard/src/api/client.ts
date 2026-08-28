@@ -76,6 +76,11 @@ const GuildConfigSchema = z.object({
     auditChannelId: z.string().nullable(),
     defaultExpiry: z.number().nullable(),
   }),
+  guild: z.object({
+    id: z.string(),
+    name: z.string(),
+    icon: z.string().nullable(),
+  }),
 });
 
 const LogEntrySchema = z.object({

@@ -55,14 +55,15 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
       });
     }
     const { guildId } = parsed.data;
-    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
-    if (!isAdmin) {
+    const adminGuilds = await fetchAdminGuilds(request.session!.accessToken);
+    const guild = adminGuilds.find((g) => g.id === guildId);
+    if (guild === undefined) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
       });
     }
     const config = await getGuildConfig(guildId);
-    return reply.send({ config });
+    return reply.send({ config, guild });
   });
 
   app.patch('/:guildId/trusted-domains', async (request, reply) => {

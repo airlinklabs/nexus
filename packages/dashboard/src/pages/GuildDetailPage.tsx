@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, ApiError, type GuildConfig } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.js';
+import { Card, Button, Badge, Input, showToast } from '../components/ui/index.js';
 
 const COMMANDS = [
   'dialog',
@@ -14,22 +15,30 @@ const COMMANDS = [
   'panel',
 ] as const;
 
+const COMMAND_DESCRIPTIONS: Record<string, string> = {
+  dialog: 'Send a message with up to 5 buttons',
+  confirm: 'Two-button confirm / cancel prompt',
+  menu: 'Dropdown select menu',
+  form: 'Multi-field modal form',
+  poll: 'Interactive poll with live results',
+  embed: 'Rich embed, optionally with navigation',
+  wizard: 'Multi-step wizard with prev/next',
+  panel: 'Persistent panel (ticket, role selector)',
+};
+
 export function GuildDetailPage() {
   const { guildId } = useParams<{ guildId: string }>();
   const { logout } = useAuth();
   const [config, setConfig] = useState<GuildConfig | null>(null);
+  const [guildInfo, setGuildInfo] = useState<{ id: string; name: string; icon: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [domainInput, setDomainInput] = useState('');
   const [roleCommand, setRoleCommand] = useState<string>(COMMANDS[0]);
   const [roleIdInput, setRoleIdInput] = useState('');
-  const [toast, setToast] = useState<string | null>(null);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
+  const showToast_ = useCallback((msg: string) => showToast(msg, 'success'), []);
 
   useEffect(() => {
     if (guildId === undefined) return;
@@ -39,6 +48,7 @@ export function GuildDetailPage() {
       .then((res) => {
         if (!cancelled) {
           setConfig(res.config);
+          setGuildInfo(res.guild);
           setLoading(false);
         }
       })
@@ -69,10 +79,10 @@ export function GuildDetailPage() {
 
     try {
       await api.guilds.addDomain(guildId, domain);
-      showToast('Domain added.');
+      showToast_('Domain added.');
     } catch {
       setConfig(prev);
-      showToast("Couldn't add that domain. Try again.");
+      showToast("Couldn't add that domain.", 'error');
     }
   };
 
@@ -89,10 +99,10 @@ export function GuildDetailPage() {
 
     try {
       await api.guilds.removeDomain(guildId, domain);
-      showToast('Domain removed.');
+      showToast_('Domain removed.');
     } catch {
       setConfig(prev);
-      showToast("Couldn't remove that domain. Try again.");
+      showToast("Couldn't remove that domain.", 'error');
     }
   };
 
@@ -104,7 +114,7 @@ export function GuildDetailPage() {
 
     const currentRoles = prev.commandRoles[roleCommand] ?? [];
     if (currentRoles.includes(roleId)) {
-      showToast('That role is already assigned.');
+      showToast('That role is already assigned.', 'info');
       return;
     }
 
@@ -117,10 +127,10 @@ export function GuildDetailPage() {
 
     try {
       await api.guilds.setCommandRoles(guildId, roleCommand, updated[roleCommand] ?? []);
-      showToast('Role added.');
+      showToast_('Role added.');
     } catch {
       setConfig(prev);
-      showToast("Couldn't add that role. Try again.");
+      showToast("Couldn't add that role.", 'error');
     }
   };
 
@@ -138,10 +148,10 @@ export function GuildDetailPage() {
 
     try {
       await api.guilds.setCommandRoles(guildId, commandName, updated);
-      showToast('Role removed.');
+      showToast_('Role removed.');
     } catch {
       setConfig(prev);
-      showToast("Couldn't remove that role. Try again.");
+      showToast("Couldn't remove that role.", 'error');
     }
   };
 
@@ -165,16 +175,9 @@ export function GuildDetailPage() {
         </header>
         <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
           <div style={{ width: 120, height: 24, background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-8)' }} />
-          <div style={{ marginBottom: 'var(--space-8)' }}>
-            <div style={{ width: 140, height: 14, background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-4)' }} />
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{ height: 80, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginBottom: 'var(--space-4)' }} />
-            ))}
-          </div>
-          <div>
-            <div style={{ width: 120, height: 14, background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-4)' }} />
-            <div style={{ height: 100, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }} />
-          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ height: 80, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginBottom: 'var(--space-4)' }} />
+          ))}
         </main>
       </div>
     );
@@ -183,25 +186,12 @@ export function GuildDetailPage() {
   if (error !== null || config === null) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-        <div
-          style={{
-            maxWidth: 640,
-            margin: '0 auto',
-            padding: 'var(--space-8) var(--space-6)',
-          }}
-        >
-          <div
-            style={{
-              padding: 'var(--space-4)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger)',
-              fontSize: 'var(--text-sm)',
-            }}
-          >
-            {error ?? 'Config not found.'}
-          </div>
+        <div style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
+          <Card>
+            <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)' }}>
+              {error ?? 'Config not found.'}
+            </p>
+          </Card>
         </div>
       </div>
     );
@@ -240,9 +230,7 @@ export function GuildDetailPage() {
           </span>
         </div>
         <button
-          onClick={() => {
-            void logout();
-          }}
+          onClick={() => void logout()}
           style={{
             fontSize: 'var(--text-xs)',
             color: 'var(--ink-low)',
@@ -255,19 +243,86 @@ export function GuildDetailPage() {
       </header>
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
-        <h2
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 600,
-            marginBottom: 'var(--space-8)',
-          }}
-        >
-          Server config
-        </h2>
+        {/* Breadcrumbs */}
+        <nav style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
+          <Link to="/dashboard" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>
+            Servers
+          </Link>
+          <span style={{ margin: '0 var(--space-1)' }}>/</span>
+          <span style={{ color: 'var(--ink-mid)' }}>{guildInfo?.name ?? 'Server'}</span>
+        </nav>
+
+        {/* Server header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-8)' }}>
+          {guildInfo?.icon !== null && guildInfo?.icon !== undefined ? (
+            <img
+              src={`https://cdn.discordapp.com/icons/${guildInfo.id}/${guildInfo.icon}.png`}
+              alt=""
+              width={40}
+              height={40}
+              style={{ borderRadius: 'var(--radius-md)' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-elevated)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--ink-low)',
+              }}
+            >
+              {(guildInfo?.name ?? 'S').charAt(0)}
+            </div>
+          )}
+          <div>
+            <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>
+              {guildInfo?.name ?? 'Server'}
+            </h1>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
+              {config.trustedDomains.length} trusted domains · {Object.keys(config.commandRoles).length} restricted commands
+            </p>
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-8)' }}>
+          <Link
+            to={`/dashboard/${guildId}/templates`}
+            style={{ textDecoration: 'none', flex: 1 }}
+          >
+            <Card padding="md" style={{ cursor: 'pointer', transition: 'border-color var(--duration-fast) var(--ease-out)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <Badge variant="info">Templates</Badge>
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginTop: 'var(--space-1)' }}>
+                Create reusable UI presets for your team
+              </p>
+            </Card>
+          </Link>
+          <Link
+            to={`/dashboard/${guildId}/log`}
+            style={{ textDecoration: 'none', flex: 1 }}
+          >
+            <Card padding="md" style={{ cursor: 'pointer', transition: 'border-color var(--duration-fast) var(--ease-out)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <Badge variant="default">Activity</Badge>
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginTop: 'var(--space-1)' }}>
+                View interaction logs
+              </p>
+            </Card>
+          </Link>
+        </div>
 
         {/* Command restrictions */}
         <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h3
+          <h2
             style={{
               fontSize: 'var(--text-sm)',
               fontWeight: 600,
@@ -277,134 +332,117 @@ export function GuildDetailPage() {
               marginBottom: 'var(--space-4)',
             }}
           >
-            Command restrictions
-          </h3>
+            Command permissions
+          </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {COMMANDS.map((cmd) => (
-              <div
-                key={cmd}
-                style={{
-                  padding: 'var(--space-4)',
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 'var(--space-2)',
-                  }}
-                >
-                  <span
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            {COMMANDS.map((cmd) => {
+              const roles = config.commandRoles[cmd] ?? [];
+              const isEditing = roleCommand === cmd;
+
+              return (
+                <Card key={cmd}>
+                  <div
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 'var(--space-2)',
                     }}
                   >
-                    /ui {cmd}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 'var(--space-1)',
-                    marginBottom: 'var(--space-2)',
-                  }}
-                >
-                  {(config.commandRoles[cmd] ?? []).length === 0 && (
-                    <span
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--ink-faint)',
-                      }}
-                    >
-                      Everyone
-                    </span>
-                  )}
-                  {(config.commandRoles[cmd] ?? []).map((roleId) => (
-                    <span
-                      key={roleId}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-1)',
-                        padding: '2px var(--space-2)',
-                        background: 'var(--bg-elevated)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--ink-mid)',
-                      }}
-                    >
-                      {roleId}
-                      <button
-                        onClick={() => {
-                          void handleRemoveRole(cmd, roleId);
-                        }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <span
                         style={{
-                          color: 'var(--ink-faint)',
-                          fontSize: 'var(--text-xs)',
-                          lineHeight: 1,
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 500,
                         }}
                       >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                {roleCommand === cmd ? (
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <input
-                      value={roleIdInput}
-                      onChange={(e) => setRoleIdInput(e.target.value)}
-                      placeholder="Role ID"
+                        /ui {cmd}
+                      </span>
+                      {roles.length === 0 && (
+                        <Badge variant="success">everyone</Badge>
+                      )}
+                    </div>
+                    {!isEditing && (
+                      <Button variant="ghost" size="sm" onClick={() => setRoleCommand(cmd)}>
+                        + Add role
+                      </Button>
+                    )}
+                  </div>
+
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-2)' }}>
+                    {COMMAND_DESCRIPTIONS[cmd] ?? ''}
+                  </p>
+
+                  {roles.length > 0 && (
+                    <div
                       style={{
-                        flex: 1,
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        void handleAddRole();
-                      }}
-                      style={{
-                        padding: 'var(--space-1) var(--space-3)',
-                        background: 'var(--accent)',
-                        color: 'var(--bg-base)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 500,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-1)',
+                        marginBottom: isEditing ? 'var(--space-2)' : 0,
                       }}
                     >
-                      Add
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setRoleCommand(cmd)}
-                    style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--accent)',
-                    }}
-                  >
-                    + Add role
-                  </button>
-                )}
-              </div>
-            ))}
+                      {roles.map((roleId) => (
+                        <span
+                          key={roleId}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-1)',
+                            padding: '2px var(--space-2)',
+                            background: 'var(--bg-elevated)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--ink-mid)',
+                          }}
+                        >
+                          {roleId}
+                          <button
+                            onClick={() => void handleRemoveRole(cmd, roleId)}
+                            style={{ color: 'var(--ink-faint)', fontSize: 'var(--text-xs)', lineHeight: 1 }}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <input
+                        value={roleIdInput}
+                        onChange={(e) => setRoleIdInput(e.target.value)}
+                        placeholder="Paste role ID"
+                        style={{
+                          flex: 1,
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'var(--text-xs)',
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void handleAddRole();
+                        }}
+                      />
+                      <Button size="sm" onClick={() => void handleAddRole()}>
+                        Add
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => { setRoleCommand(cmd); setRoleIdInput(''); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </section>
 
         {/* Trusted domains */}
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h3
+        <section>
+          <h2
             style={{
               fontSize: 'var(--text-sm)',
               fontWeight: 600,
@@ -415,151 +453,62 @@ export function GuildDetailPage() {
             }}
           >
             Trusted domains
-          </h3>
+          </h2>
 
-          <div
-            style={{
-              padding: 'var(--space-4)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border)',
-            }}
-          >
+          <Card>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-3)' }}>
+              Domains allowed to serve remote JS definitions. GitHub raw and Gist are trusted by default.
+            </p>
+
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-              <input
-                value={domainInput}
-                onChange={(e) => setDomainInput(e.target.value)}
+              <Input
                 placeholder="example.com"
-                style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}
+                value={domainInput}
+                onChange={setDomainInput}
+                mono
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    void handleAddDomain();
-                  }
+                  if (e.key === 'Enter') void handleAddDomain();
                 }}
               />
-              <button
-                onClick={() => {
-                  void handleAddDomain();
-                }}
-                style={{
-                  padding: 'var(--space-1) var(--space-3)',
-                  background: 'var(--accent)',
-                  color: 'var(--bg-base)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 500,
-                }}
-              >
-                Add
-              </button>
+              <Button onClick={() => void handleAddDomain()}>Add</Button>
             </div>
-            {config.trustedDomains.length === 0 && (
-              <p
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--ink-faint)',
-                }}
-              >
-                No trusted domains yet. Add a domain to allow remote JS definitions from it.
-              </p>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-              {config.trustedDomains.map((domain) => (
-                <div
-                  key={domain}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 'var(--space-2)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--ink-mid)',
-                    }}
-                  >
-                    {domain}
-                  </span>
-                  <button
-                    onClick={() => {
-                      void handleRemoveDomain(domain);
-                    }}
-                    style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--danger)',
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
-        {/* Audit log link */}
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <Link
-              to={`/dashboard/${guildId}/templates`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-3) var(--space-4)',
-                background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border)',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--ink-mid)',
-                textDecoration: 'none',
-              }}
-            >
-              Templates →
-            </Link>
-            <Link
-              to={`/dashboard/${guildId}/log`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-3) var(--space-4)',
-                background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border)',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--ink-mid)',
-                textDecoration: 'none',
-              }}
-            >
-              Interaction log →
-            </Link>
-          </div>
+            {config.trustedDomains.length === 0 ? (
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
+                No custom domains yet.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                {config.trustedDomains.map((domain) => (
+                  <div
+                    key={domain}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 'var(--space-2)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--ink-mid)',
+                      }}
+                    >
+                      {domain}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={() => void handleRemoveDomain(domain)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </section>
       </main>
-
-      {toast !== null && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--space-6)',
-            right: 'var(--space-6)',
-            padding: 'var(--space-3) var(--space-4)',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--ink-high)',
-            boxShadow: '0 4px 12px oklch(0% 0 0 / 40%)',
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
