@@ -10,6 +10,7 @@ import { healthRoute } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { guildRoutes } from './routes/guilds.js';
 import { messageRoutes } from './routes/messages.js';
+import { templateRoutes } from './routes/templates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DASHBOARD_DIST = join(__dirname, '../../../dashboard/dist');
@@ -70,6 +71,7 @@ export async function createServer() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(guildRoutes, { prefix: '/api/guilds' });
   await app.register(messageRoutes, { prefix: '/api/messages' });
+  await app.register(templateRoutes, { prefix: '/api/templates' });
 
   const DEFS_DIST = join(__dirname, '../../../static/definitions');
 

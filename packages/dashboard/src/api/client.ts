@@ -90,6 +90,29 @@ const LogEntrySchema = z.object({
 
 const LogSchema = z.object({ log: z.array(LogEntrySchema) });
 
+const TemplateListItemSchema = z.object({
+  templateId: z.string(),
+  name: z.string(),
+  description: z.string(),
+  argsSchema: z.string(),
+  createdBy: z.string(),
+});
+
+const TemplateListSchema = z.object({ templates: z.array(TemplateListItemSchema) });
+
+const TemplateDetailSchema = z.object({
+  templateId: z.string(),
+  guildId: z.string(),
+  name: z.string(),
+  description: z.string(),
+  definitionSource: z.string(),
+  definitionJson: z.string(),
+  argsSchema: z.string(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export const api = {
   auth: {
     me: () => request('/auth/me', MeSchema),
@@ -141,8 +164,48 @@ export const api = {
     log: (guildId: string, limit = 50) =>
       request(`/api/messages/${guildId}/log?limit=${limit}`, LogSchema),
   },
+
+  templates: {
+    list: (guildId: string) =>
+      request(`/api/templates/${guildId}`, TemplateListSchema),
+    get: (guildId: string, templateId: string) =>
+      request(`/api/templates/${guildId}/${templateId}`, z.object({ template: TemplateDetailSchema })),
+    create: (
+      guildId: string,
+      data: { name: string; description: string; definition: string; argsSchema?: string },
+    ) =>
+      request(
+        `/api/templates/${guildId}`,
+        z.object({ template: TemplateDetailSchema }),
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+      ),
+    update: (
+      guildId: string,
+      templateId: string,
+      data: { name?: string; description?: string; definition?: string; argsSchema?: string },
+    ) =>
+      request(
+        `/api/templates/${guildId}/${templateId}`,
+        z.object({ template: TemplateDetailSchema }),
+        {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        },
+      ),
+    delete: (guildId: string, templateId: string) =>
+      request(
+        `/api/templates/${guildId}/${templateId}`,
+        z.object({ ok: z.boolean() }),
+        { method: 'DELETE' },
+      ),
+  },
 } as const;
 
 export type Guild = z.infer<typeof GuildSchema>;
 export type GuildConfig = z.infer<typeof GuildConfigSchema>['config'];
 export type LogEntry = z.infer<typeof LogEntrySchema>;
+export type TemplateListItem = z.infer<typeof TemplateListItemSchema>;
+export type TemplateDetail = z.infer<typeof TemplateDetailSchema>;

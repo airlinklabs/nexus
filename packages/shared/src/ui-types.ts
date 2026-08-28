@@ -127,6 +127,7 @@ export type UIDefinition = {
     readonly modals?: Record<string, ModalHandler>;
   };
   readonly modals?: Record<string, ModalDef>;
+  readonly args?: Record<string, string>;
 };
 
 // ─── Stored message record (what the bot persists per sent message) ───────────

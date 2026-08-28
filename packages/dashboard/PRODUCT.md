@@ -6,9 +6,6 @@ A configuration dashboard for the Nexus Discord UI bot. Server administrators lo
 ## Who uses it
 Discord server administrators and moderators who have the Administrator permission in their server.
 
-## Register
-product
-
 ## Core surfaces
 - /login — Discord OAuth entry point
 - /dashboard — guild list (servers the user admins)

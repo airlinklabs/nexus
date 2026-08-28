@@ -15,6 +15,13 @@
       "when": 1787922224728,
       "tag": "0001_create_panels",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787932000000,
+      "tag": "0002_create_templates",
+      "breakpoints": true
     }
   ]
 }

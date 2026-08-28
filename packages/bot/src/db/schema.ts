@@ -44,3 +44,16 @@ export const panels = sqliteTable('panels', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+export const templates = sqliteTable('templates', {
+  templateId: text('template_id').primaryKey(),
+  guildId: text('guild_id').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  definitionSource: text('definition_source').notNull(),
+  definitionJson: text('definition_json').notNull(),
+  argsSchema: text('args_schema').notNull().default('[]'),
+  createdBy: text('created_by').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

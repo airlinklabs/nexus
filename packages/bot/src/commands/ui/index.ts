@@ -11,6 +11,8 @@ import { handleWizard } from './wizard.js';
 import { handlePanel } from './panel.js';
 import { handleReload } from './reload.js';
 import { handleDelete } from './delete.js';
+import { handleUse } from './use.js';
+import { handleTemplates } from './templates.js';
 
 const SUBCOMMAND_HANDLERS: Record<
   string,
@@ -26,6 +28,8 @@ const SUBCOMMAND_HANDLERS: Record<
   panel: handlePanel,
   reload: handleReload,
   delete: handleDelete,
+  use: handleUse,
+  templates: handleTemplates,
 };
 
 export const command: SlashCommand = {
@@ -132,6 +136,22 @@ export const command: SlashCommand = {
         .addStringOption((opt) =>
           opt.setName('message-id').setDescription('ID of the message to delete').setRequired(true),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('use')
+        .setDescription('Use a saved template with custom arguments')
+        .addStringOption((opt) =>
+          opt.setName('template').setDescription('Template name').setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('args').setDescription('Arguments: key=value key2="value with spaces"').setRequired(false),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('templates')
+        .setDescription('List available templates for this server'),
     ),
 
   async execute(interaction) {
