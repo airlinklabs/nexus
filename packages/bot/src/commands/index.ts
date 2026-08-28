@@ -6,8 +6,9 @@ import type { SlashCommand } from 'shared/slash-command';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function isCommandFile(filename: string): boolean {
-  return (filename.endsWith('.js') || filename.endsWith('.ts')) &&
-    filename !== 'index.js' && filename !== 'index.ts';
+  return filename.endsWith('.js') &&
+    !filename.endsWith('.d.ts') &&
+    filename !== 'index.js';
 }
 
 function isCommandDirectory(entry: string): boolean {
@@ -16,7 +17,7 @@ function isCommandDirectory(entry: string): boolean {
     const stat = statSync(dirPath);
     if (!stat.isDirectory()) return false;
     const dirFiles = readdirSync(dirPath);
-    return dirFiles.includes('index.ts') || dirFiles.includes('index.js');
+    return dirFiles.includes('index.js');
   } catch {
     return false;
   }
