@@ -16,6 +16,9 @@ importers:
       discord.js:
         specifier: ^14.15.3
         version: 14.27.0
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       drizzle-orm:
         specifier: ^0.32.0
         version: 0.32.2(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)
@@ -351,6 +354,10 @@ packages:
   discord.js@14.27.0:
     resolution: {integrity: sha512-qHbFlFG2N7y3LjPySYsL6A1+BnX6bkTVgo842EX0CqVPk/KTMwZkojPHEXKsQUpWZNyz5BISNHK1cPpQw0+m4A==}
     engines: {node: '>=18'}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
 
   drizzle-orm@0.32.2:
     resolution: {integrity: sha512-3fXKzPzrgZIcnWCSLiERKN5Opf9Iagrag75snfFlKeKSYB1nlgPBshzW3Zn6dQymkyiib+xc4nIz0t8U+Xdpuw==}
@@ -966,6 +973,8 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  dotenv@16.6.1: {}
 
   drizzle-orm@0.32.2(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0):
     optionalDependencies:

@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export async function loadCommands(): Promise<Map<string, SlashCommand>> {
   const commands = new Map<string, SlashCommand>();
   const files = readdirSync(__dirname).filter(
-    (f) => f.endsWith('.js') && f !== 'index.js',
+    (f) => (f.endsWith('.js') || f.endsWith('.ts')) && f !== 'index.js' && f !== 'index.ts',
   );
 
   for (const file of files) {
