@@ -502,24 +502,43 @@ export function GuildDetailPage() {
         </section>
 
         {/* Audit log link */}
-        <section>
-          <Link
-            to={`/dashboard/${guildId}/log`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              padding: 'var(--space-3) var(--space-4)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--ink-mid)',
-              textDecoration: 'none',
-            }}
-          >
-            View interaction log →
-          </Link>
+        <section style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <Link
+              to={`/dashboard/${guildId}/templates`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--ink-mid)',
+                textDecoration: 'none',
+              }}
+            >
+              Templates →
+            </Link>
+            <Link
+              to={`/dashboard/${guildId}/log`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--ink-mid)',
+                textDecoration: 'none',
+              }}
+            >
+              Interaction log →
+            </Link>
+          </div>
         </section>
       </main>
 

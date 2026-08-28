@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage.js';
 import { GuildListPage } from './pages/GuildListPage.js';
 import { GuildDetailPage } from './pages/GuildDetailPage.js';
 import { InteractionLogPage } from './pages/InteractionLogPage.js';
+import { TemplatesPage } from './pages/TemplatesPage.js';
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<GuildListPage />} />
           <Route path="/dashboard/:guildId" element={<GuildDetailPage />} />
+          <Route path="/dashboard/:guildId/templates" element={<TemplatesPage />} />
           <Route
             path="/dashboard/:guildId/log"
             element={<InteractionLogPage />}
