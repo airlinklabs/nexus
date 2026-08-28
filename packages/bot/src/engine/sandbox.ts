@@ -31,15 +31,6 @@ const SANDBOX_GLOBALS = {
     warn: (...args: unknown[]) => console.warn('[sandbox]', ...args),
     error: (...args: unknown[]) => console.error('[sandbox]', ...args),
   },
-  Math,
-  Date,
-  JSON,
-  parseInt,
-  parseFloat,
-  isNaN,
-  isFinite,
-  encodeURIComponent,
-  decodeURIComponent,
   embedBuilder: {
     create(options: {
       title?: string;
