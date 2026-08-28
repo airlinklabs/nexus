@@ -7,6 +7,7 @@ export type GuildConfig = {
   readonly guildId: string;
   readonly trustedDomains: ReadonlyArray<string>;
   readonly commandRoles: Record<string, ReadonlyArray<RoleId>>;
+  readonly globalRole: string | null;
   readonly auditChannelId: string | null;
   readonly defaultExpiry: number | null;
 };
@@ -29,6 +30,7 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig> {
       guildId,
       trustedDomains: ['raw.githubusercontent.com', 'gist.githubusercontent.com'],
       commandRoles: {},
+      globalRole: null,
       auditChannelId: null,
       defaultExpiry: null,
     };
@@ -38,6 +40,7 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig> {
     guildId: row.guildId,
     trustedDomains: safeJsonParse<string[]>(row.trustedDomains, []),
     commandRoles: safeJsonParse<Record<string, RoleId[]>>(row.commandRoles, {}),
+    globalRole: row.globalRole ?? null,
     auditChannelId: row.auditChannelId ?? null,
     defaultExpiry: row.defaultExpiry ?? null,
   };
@@ -51,6 +54,7 @@ export async function upsertGuildConfig(config: GuildConfig): Promise<void> {
       guildId: config.guildId,
       trustedDomains: JSON.stringify(config.trustedDomains),
       commandRoles: JSON.stringify(config.commandRoles),
+      globalRole: config.globalRole,
       auditChannelId: config.auditChannelId,
       defaultExpiry: config.defaultExpiry,
       createdAt: now,
@@ -61,6 +65,7 @@ export async function upsertGuildConfig(config: GuildConfig): Promise<void> {
       set: {
         trustedDomains: JSON.stringify(config.trustedDomains),
         commandRoles: JSON.stringify(config.commandRoles),
+        globalRole: config.globalRole,
         auditChannelId: config.auditChannelId,
         defaultExpiry: config.defaultExpiry,
         updatedAt: now,
@@ -94,5 +99,16 @@ export async function setCommandRoles(
   await upsertGuildConfig({
     ...config,
     commandRoles: { ...config.commandRoles, [commandName]: roleIds },
+  });
+}
+
+export async function setGlobalRole(
+  guildId: string,
+  roleId: string | null,
+): Promise<void> {
+  const config = await getGuildConfig(guildId);
+  await upsertGuildConfig({
+    ...config,
+    globalRole: roleId,
   });
 }

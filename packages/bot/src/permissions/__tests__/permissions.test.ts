@@ -48,6 +48,7 @@ describe('checkCommandPermission', () => {
       guildId: 'guild-1',
       trustedDomains: [],
       commandRoles: {},
+      globalRole: null,
       auditChannelId: null,
       defaultExpiry: null,
     });
@@ -60,6 +61,7 @@ describe('checkCommandPermission', () => {
       guildId: 'guild-1',
       trustedDomains: [],
       commandRoles: { 'ui dialog': ['role-mod' as RoleId] },
+      globalRole: null,
       auditChannelId: null,
       defaultExpiry: null,
     });
@@ -72,6 +74,7 @@ describe('checkCommandPermission', () => {
       guildId: 'guild-1',
       trustedDomains: [],
       commandRoles: { 'ui dialog': ['role-mod' as RoleId] },
+      globalRole: null,
       auditChannelId: null,
       defaultExpiry: null,
     });
@@ -85,6 +88,7 @@ describe('checkCommandPermission', () => {
       guildId: 'guild-1',
       trustedDomains: [],
       commandRoles: { 'ui dialog': ['role-mod' as RoleId] },
+      globalRole: null,
       auditChannelId: null,
       defaultExpiry: null,
     });

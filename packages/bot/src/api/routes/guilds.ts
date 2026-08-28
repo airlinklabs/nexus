@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sessionMiddleware, requireSession } from '../middleware/session.js';
-import { getGuildConfig, addTrustedDomain, removeTrustedDomain, setCommandRoles } from '../../db/guildConfig.js';
+import { getGuildConfig, addTrustedDomain, removeTrustedDomain, setCommandRoles, setGlobalRole } from '../../db/guildConfig.js';
 import type { RoleId } from 'shared/ui-types';
 
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -22,6 +22,24 @@ async function fetchAdminGuilds(accessToken: string): Promise<Array<{ id: string
   return all.filter((g) => (BigInt(g.permissions) & 0x8n) !== 0n);
 }
 
+async function fetchGuildRoles(accessToken: string, guildId: string): Promise<Array<{ id: string; name: string; color: number; position: number }>> {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return [];
+
+  const roles = await res.json() as Array<{
+    id: string;
+    name: string;
+    color: number;
+    position: number;
+  }>;
+
+  return roles
+    .filter((r) => r.name !== '@everyone')
+    .sort((a, b) => b.position - a.position);
+}
+
 async function assertGuildAdmin(accessToken: string, guildId: string): Promise<boolean> {
   const guilds = await fetchAdminGuilds(accessToken);
   return guilds.some((g) => g.id === guildId);
@@ -35,6 +53,9 @@ const trustedDomainsSchema = z.object({
 const commandRolesSchema = z.object({
   commandName: z.string(),
   roleIds: z.array(z.string()),
+});
+const globalRoleSchema = z.object({
+  roleId: z.string().nullable(),
 });
 
 export const guildRoutes: FastifyPluginAsync = async (app) => {
@@ -64,6 +85,24 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
     }
     const config = await getGuildConfig(guildId);
     return reply.send({ config, guild });
+  });
+
+  app.get('/:guildId/roles', async (request, reply) => {
+    const parsed = guildIdSchema.safeParse(request.params);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_INPUT', message: 'Invalid guild ID.' },
+      });
+    }
+    const { guildId } = parsed.data;
+    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
+    if (!isAdmin) {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+      });
+    }
+    const roles = await fetchGuildRoles(request.session!.accessToken, guildId);
+    return reply.send({ roles });
   });
 
   app.patch('/:guildId/trusted-domains', async (request, reply) => {
@@ -122,6 +161,33 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
     }
 
     await setCommandRoles(guildId, commandName, roleIds as RoleId[]);
+    return reply.send({ ok: true });
+  });
+
+  app.patch('/:guildId/global-role', async (request, reply) => {
+    const paramsParsed = guildIdSchema.safeParse(request.params);
+    if (!paramsParsed.success) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_INPUT', message: 'Invalid guild ID.' },
+      });
+    }
+    const bodyParsed = globalRoleSchema.safeParse(request.body);
+    if (!bodyParsed.success) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_INPUT', message: 'Provide a roleId or null.' },
+      });
+    }
+    const { guildId } = paramsParsed.data;
+    const { roleId } = bodyParsed.data;
+
+    const isAdmin = await assertGuildAdmin(request.session!.accessToken, guildId);
+    if (!isAdmin) {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: "You're not an admin of that server." },
+      });
+    }
+
+    await setGlobalRole(guildId, roleId);
     return reply.send({ ok: true });
   });
 };

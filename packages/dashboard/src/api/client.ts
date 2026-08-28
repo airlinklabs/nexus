@@ -73,6 +73,7 @@ const GuildConfigSchema = z.object({
     guildId: z.string(),
     trustedDomains: z.array(z.string()),
     commandRoles: z.record(z.array(z.string())),
+    globalRole: z.string().nullable(),
     auditChannelId: z.string().nullable(),
     defaultExpiry: z.number().nullable(),
   }),
@@ -162,6 +163,27 @@ export const api = {
           method: 'PATCH',
           body: JSON.stringify({ commandName, roleIds }),
         },
+      ),
+    setGlobalRole: (guildId: string, roleId: string | null) =>
+      request(
+        `/api/guilds/${guildId}/global-role`,
+        z.object({ ok: z.boolean() }),
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ roleId }),
+        },
+      ),
+    roles: (guildId: string) =>
+      request(
+        `/api/guilds/${guildId}/roles`,
+        z.object({
+          roles: z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            color: z.number(),
+            position: z.number(),
+          })),
+        }),
       ),
   },
 

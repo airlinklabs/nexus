@@ -1,6 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { checkAndReply } from './_shared.js';
 import { listTemplates } from '../../db/templates.js';
+import { BUILT_IN_TEMPLATES } from '../../engine/builtinTemplates.js';
 
 export async function handleTemplates(interaction: ChatInputCommandInteraction): Promise<void> {
   const allowed = await checkAndReply(interaction);
@@ -12,25 +13,33 @@ export async function handleTemplates(interaction: ChatInputCommandInteraction):
     return;
   }
 
-  const templates = await listTemplates(guildId);
+  const custom = await listTemplates(guildId);
 
-  if (templates.length === 0) {
-    await interaction.reply({
-      content: 'No templates yet. Create one in the dashboard or use `/ui dialog` to build a UI from scratch.',
-      ephemeral: true,
-    });
-    return;
-  }
-
-  const list = templates
-    .map((t) => {
-      const desc = t.description.length > 0 ? ` — ${t.description}` : '';
-      return `\`${t.name}\`${desc}`;
-    })
+  const builtInList = BUILT_IN_TEMPLATES
+    .map((t) => `\`${t.name}\` — ${t.description}`)
     .join('\n');
 
+  const customList = custom.length > 0
+    ? custom
+        .map((t) => {
+          const desc = t.description.length > 0 ? ` — ${t.description}` : '';
+          return `\`${t.name}\`${desc}`;
+        })
+        .join('\n')
+    : 'None yet';
+
   await interaction.reply({
-    content: `**Templates**\n${list}\n\nUse \`/ui use template:<name> args:key=value\` to invoke one.`,
+    embeds: [
+      {
+        title: 'Available Templates',
+        color: 0x5865f2,
+        fields: [
+          { name: 'Built-in', value: builtInList, inline: false },
+          { name: 'Custom', value: customList, inline: false },
+        ],
+        footer: { text: 'Use /ui use template:<name> to invoke' },
+      },
+    ],
     ephemeral: true,
   });
 }

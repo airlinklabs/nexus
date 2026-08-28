@@ -1,6 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { checkAndReply, sendUI } from './_shared.js';
 import { getTemplateByName } from '../../db/templates.js';
+import { getBuiltInTemplate } from '../../engine/builtinTemplates.js';
 import { evaluateDefinition } from '../../engine/sandbox.js';
 
 export async function handleUse(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -18,6 +19,33 @@ export async function handleUse(interaction: ChatInputCommandInteraction): Promi
 
   await interaction.deferReply({ ephemeral: false });
 
+  const args = parseArgs(argsRaw);
+
+  // Check built-in templates first
+  const builtIn = getBuiltInTemplate(templateName);
+  if (builtIn !== undefined) {
+    const jsonStr = JSON.stringify(builtIn.definition);
+    const substituted = substituteArgs(jsonStr, args);
+
+    let definition;
+    try {
+      definition = JSON.parse(substituted);
+    } catch {
+      await interaction.editReply({ content: 'Failed to parse template definition.' });
+      return;
+    }
+
+    await sendUI(interaction, definition, {
+      definitionRaw: `builtin:${templateName}`,
+      allowedRoles: null,
+      callerOnly: false,
+      expiresInSeconds: null,
+      ephemeral: false,
+    });
+    return;
+  }
+
+  // Check custom templates
   const template = await getTemplateByName(guildId, templateName);
   if (template === null) {
     await interaction.editReply({
@@ -26,7 +54,6 @@ export async function handleUse(interaction: ChatInputCommandInteraction): Promi
     return;
   }
 
-  const args = parseArgs(argsRaw);
   const substituted = substituteArgs(template.definitionSource, args);
 
   const result = evaluateDefinition(substituted);

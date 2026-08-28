@@ -22,6 +22,14 @@ export function checkCommandPermission(
     return { allowed: true };
   }
 
+  // Check global role first — applies to all commands
+  if (guildConfig.globalRole !== null) {
+    const hasGlobal = member.roles.cache.has(guildConfig.globalRole);
+    if (!hasGlobal) {
+      return { allowed: false, reason: 'command:no_role' };
+    }
+  }
+
   const requiredRoles = guildConfig.commandRoles[commandName];
 
   if (requiredRoles === undefined || requiredRoles.length === 0) {

@@ -4,6 +4,7 @@ export const guilds = sqliteTable('guilds', {
   guildId: text('guild_id').primaryKey(),
   trustedDomains: text('trusted_domains').notNull().default('[]'),
   commandRoles: text('command_roles').notNull().default('{}'),
+  globalRole: text('global_role'),
   auditChannelId: text('audit_channel_id'),
   defaultExpiry: integer('default_expiry'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
