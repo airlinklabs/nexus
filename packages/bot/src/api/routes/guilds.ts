@@ -13,7 +13,11 @@ async function fetchUserGuilds(accessToken: string): Promise<ReadonlyArray<Disco
   const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[guilds] User guilds fetch failed: ${res.status} ${body}`);
+    return [];
+  }
 
   const all = await res.json() as Array<{
     id: string;
@@ -21,6 +25,7 @@ async function fetchUserGuilds(accessToken: string): Promise<ReadonlyArray<Disco
     icon: string | null;
   }>;
 
+  console.log(`[guilds] User is in ${all.length} guild(s):`, all.map((g) => `${g.name} (${g.id})`).join(', '));
   return all;
 }
 
@@ -35,7 +40,11 @@ async function fetchBotGuilds(): Promise<ReadonlyArray<DiscordGuild>> {
   const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
     headers: { Authorization: `Bot ${env.DISCORD_TOKEN}` },
   });
-  if (!res.ok) return botGuildsCache;
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[guilds] Bot guilds fetch failed: ${res.status} ${body}`);
+    return botGuildsCache;
+  }
 
   const all = await res.json() as Array<{
     id: string;
@@ -43,6 +52,7 @@ async function fetchBotGuilds(): Promise<ReadonlyArray<DiscordGuild>> {
     icon: string | null;
   }>;
 
+  console.log(`[guilds] Bot is in ${all.length} guild(s):`, all.map((g) => `${g.name} (${g.id})`).join(', '));
   botGuildsCache = all;
   botGuildsCacheExpiry = Date.now() + 5 * 60 * 1000;
   return botGuildsCache;
@@ -100,7 +110,9 @@ export const guildRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async (request, reply) => {
     const session = request.session!;
+    console.log(`[guilds] Fetching shared guilds for user ${session.userId}`);
     const sharedGuilds = await fetchSharedGuilds(session.accessToken);
+    console.log(`[guilds] Returning ${sharedGuilds.length} shared guild(s)`);
     return reply.send({ guilds: sharedGuilds });
   });
 
