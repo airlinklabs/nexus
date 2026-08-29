@@ -5,14 +5,7 @@ import { useAuth } from '../contexts/AuthContext.js';
 import { Card, Button, Badge, Input, Select, showToast } from '../components/ui/index.js';
 
 const COMMANDS = [
-  'dialog',
-  'confirm',
-  'menu',
-  'form',
-  'poll',
-  'embed',
-  'wizard',
-  'panel',
+  'dialog', 'confirm', 'menu', 'form', 'poll', 'embed', 'wizard', 'panel', 'use', 'templates', 'file', 'reload', 'delete',
 ] as const;
 
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
@@ -24,6 +17,11 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   embed: 'Rich embed, optionally with navigation',
   wizard: 'Multi-step wizard with prev/next',
   panel: 'Persistent panel (ticket, role selector)',
+  use: 'Invoke a template or definition',
+  templates: 'List available templates',
+  file: 'Load UI from a URL',
+  reload: 'Reload a cached definition',
+  delete: 'Remove a UI message',
 };
 
 type DiscordRole = { id: string; name: string; color: number; position: number };
@@ -46,10 +44,7 @@ export function GuildDetailPage() {
   useEffect(() => {
     if (guildId === undefined) return;
     let cancelled = false;
-    Promise.all([
-      api.guilds.get(guildId),
-      api.guilds.roles(guildId),
-    ])
+    Promise.all([api.guilds.get(guildId), api.guilds.roles(guildId)])
       .then(([configRes, rolesRes]) => {
         if (!cancelled) {
           setConfig(configRes.config);
@@ -60,14 +55,11 @@ export function GuildDetailPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          const msg = err instanceof ApiError ? err.message : 'Failed to load config.';
-          setError(msg);
+          setError(err instanceof ApiError ? err.message : 'Failed to load config.');
           setLoading(false);
         }
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [guildId]);
 
   const handleAddDomain = async () => {
@@ -75,34 +67,19 @@ export function GuildDetailPage() {
     const domain = domainInput.trim().toLowerCase();
     const prev = config;
     if (prev === null) return;
-
     setConfig({ ...prev, trustedDomains: [...prev.trustedDomains, domain] });
     setDomainInput('');
-
-    try {
-      await api.guilds.addDomain(guildId, domain);
-      showToast_('Domain added.');
-    } catch {
-      setConfig(prev);
-      showToast("Couldn't add that domain.", 'error');
-    }
+    try { await api.guilds.addDomain(guildId, domain); showToast_('Domain added.'); }
+    catch { setConfig(prev); showToast("Couldn't add that domain.", 'error'); }
   };
 
   const handleRemoveDomain = async (domain: string) => {
-    if (!confirm(`Remove trusted domain "${domain}"?`)) return;
     if (guildId === undefined) return;
     const prev = config;
     if (prev === null) return;
-
     setConfig({ ...prev, trustedDomains: prev.trustedDomains.filter((d) => d !== domain) });
-
-    try {
-      await api.guilds.removeDomain(guildId, domain);
-      showToast_('Domain removed.');
-    } catch {
-      setConfig(prev);
-      showToast("Couldn't remove that domain.", 'error');
-    }
+    try { await api.guilds.removeDomain(guildId, domain); showToast_('Domain removed.'); }
+    catch { setConfig(prev); showToast("Couldn't remove that domain.", 'error'); }
   };
 
   const handleAddRole = async () => {
@@ -110,70 +87,51 @@ export function GuildDetailPage() {
     const roleId = roleIdInput.trim();
     const prev = config;
     if (prev === null) return;
-
     const currentRoles = prev.commandRoles[roleCommand] ?? [];
-    if (currentRoles.includes(roleId)) {
-      showToast('That role is already assigned.', 'info');
-      return;
-    }
-
+    if (currentRoles.includes(roleId)) { showToast('That role is already assigned.', 'info'); return; }
     const updated = { ...prev.commandRoles, [roleCommand]: [...currentRoles, roleId] };
     setConfig({ ...prev, commandRoles: updated });
     setRoleIdInput('');
-
-    try {
-      await api.guilds.setCommandRoles(guildId, roleCommand, updated[roleCommand] ?? []);
-      showToast_('Role added.');
-    } catch {
-      setConfig(prev);
-      showToast("Couldn't add that role.", 'error');
-    }
+    try { await api.guilds.setCommandRoles(guildId, roleCommand, updated[roleCommand] ?? []); showToast_('Role added.'); }
+    catch { setConfig(prev); showToast("Couldn't add that role.", 'error'); }
   };
 
   const handleRemoveRole = async (commandName: string, roleId: string) => {
     if (guildId === undefined) return;
     const prev = config;
     if (prev === null) return;
-
     const updated = (prev.commandRoles[commandName] ?? []).filter((r) => r !== roleId);
     setConfig({ ...prev, commandRoles: { ...prev.commandRoles, [commandName]: updated } });
-
-    try {
-      await api.guilds.setCommandRoles(guildId, commandName, updated);
-      showToast_('Role removed.');
-    } catch {
-      setConfig(prev);
-      showToast("Couldn't remove that role.", 'error');
-    }
+    try { await api.guilds.setCommandRoles(guildId, commandName, updated); showToast_('Role removed.'); }
+    catch { setConfig(prev); showToast("Couldn't remove that role.", 'error'); }
   };
 
   const handleSetGlobalRole = async (roleId: string) => {
     if (guildId === undefined) return;
     const prev = config;
     if (prev === null) return;
-
     setConfig({ ...prev, globalRole: roleId || null });
-
-    try {
-      await api.guilds.setGlobalRole(guildId, roleId || null);
-      showToast_(roleId ? 'Global role set.' : 'Global role removed.');
-    } catch {
-      setConfig(prev);
-      showToast("Couldn't update global role.", 'error');
-    }
+    try { await api.guilds.setGlobalRole(guildId, roleId || null); showToast_(roleId ? 'Global role set.' : 'Global role removed.'); }
+    catch { setConfig(prev); showToast("Couldn't update global role.", 'error'); }
   };
 
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-4) var(--space-6)', borderBottom: '1px solid var(--border)' }}>
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: 'var(--space-3) var(--space-6)',
+          background: 'oklch(14% 0.008 250 / 80%)', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--border)',
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <div style={{ width: 60, height: 16, background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)' }} />
+            <Skeleton width={60} height={16} />
           </div>
         </header>
         <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
           {[1, 2, 3].map((i) => (
-            <div key={i} style={{ height: 80, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginBottom: 'var(--space-4)' }} />
+            <div key={i} style={{ height: 80, background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', marginBottom: 'var(--space-4)' }} />
           ))}
         </main>
       </div>
@@ -192,63 +150,113 @@ export function GuildDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-4) var(--space-6)', borderBottom: '1px solid var(--border)' }}>
+      {/* Header */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: 'var(--space-3) var(--space-6)',
+        background: 'oklch(14% 0.008 250 / 80%)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Link to="/dashboard" style={{ color: 'var(--ink-low)', fontSize: 'var(--text-sm)', textDecoration: 'none' }}>← Servers</Link>
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--ink-high)' }}>nexus</span>
+          <Link to="/dashboard" style={{
+            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+            color: 'var(--ink-low)', fontSize: 'var(--text-sm)', textDecoration: 'none',
+            transition: 'color var(--duration-fast) var(--ease-out)',
+          }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ink-high)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-low)'; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Servers
+          </Link>
+          <span style={{ color: 'var(--ink-faint)', fontSize: 'var(--text-sm)' }}>/</span>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--ink-high)',
+            fontSize: 'var(--text-sm)',
+            maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {guildInfo?.name ?? 'Server'}
+          </span>
         </div>
-        <button onClick={() => void logout()} style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-low)', padding: 'var(--space-1) var(--space-2)', borderRadius: 'var(--radius-sm)' }}>Log out</button>
+        <button
+          onClick={() => void logout()}
+          style={{
+            fontSize: 'var(--text-xs)', color: 'var(--ink-low)',
+            padding: 'var(--space-1) var(--space-2)', borderRadius: 'var(--radius-sm)',
+            transition: 'color var(--duration-fast) var(--ease-out)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-low)'; }}
+        >
+          Log out
+        </button>
       </header>
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
-        {/* Breadcrumbs */}
-        <nav style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
-          <Link to="/dashboard" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Servers</Link>
-          <span style={{ margin: '0 var(--space-1)' }}>/</span>
-          <span style={{ color: 'var(--ink-mid)' }}>{guildInfo?.name ?? 'Server'}</span>
-        </nav>
-
         {/* Server header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-8)' }}>
+        <div className="animate-in" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
           {guildInfo?.icon !== null && guildInfo?.icon !== undefined ? (
-            <img src={`https://cdn.discordapp.com/icons/${guildInfo.id}/${guildInfo.icon}.png`} alt="" width={40} height={40} style={{ borderRadius: 'var(--radius-md)' }} />
+            <img src={`https://cdn.discordapp.com/icons/${guildInfo.id}/${guildInfo.icon}.png?size=80`} alt="" width={48} height={48} style={{ borderRadius: 'var(--radius-lg)' }} />
           ) : (
-            <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-md)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--ink-low)' }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 'var(--radius-lg)',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-dim))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--bg-base)',
+            }}>
               {(guildInfo?.name ?? 'S').charAt(0)}
             </div>
           )}
           <div>
-            <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 600 }}>{guildInfo?.name ?? 'Server'}</h1>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>
-              {config.trustedDomains.length} trusted domains · {Object.keys(config.commandRoles).length} restricted commands
-            </p>
+            <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, letterSpacing: '-0.02em' }}>{guildInfo?.name ?? 'Server'}</h1>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
+              <Badge variant="accent">{config.trustedDomains.length} domains</Badge>
+              <Badge variant="info">{Object.keys(config.commandRoles).length} restricted</Badge>
+            </div>
           </div>
         </div>
 
         {/* Quick actions */}
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-8)' }}>
+        <div className="animate-in" style={{ animationDelay: '60ms', display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-8)' }}>
           <Link to={`/dashboard/${guildId}/templates`} style={{ textDecoration: 'none', flex: 1 }}>
-            <Card padding="md" style={{ cursor: 'pointer' }}>
-              <Badge variant="info">Templates</Badge>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginTop: 'var(--space-1)' }}>Create reusable UI presets for your team</p>
+            <Card padding="md" hover>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Templates</span>
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-mid)' }}>Create reusable UI presets</p>
             </Card>
           </Link>
           <Link to={`/dashboard/${guildId}/log`} style={{ textDecoration: 'none', flex: 1 }}>
-            <Card padding="md" style={{ cursor: 'pointer' }}>
-              <Badge variant="default">Activity</Badge>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginTop: 'var(--space-1)' }}>View interaction logs</p>
+            <Card padding="md" hover>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--info)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20V10M18 20V4M6 20v-4" />
+                </svg>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Activity</span>
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-mid)' }}>View interaction logs</p>
             </Card>
           </Link>
         </div>
 
         {/* Global role */}
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-mid)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-4)' }}>
+        <section className="animate-in" style={{ animationDelay: '120ms', marginBottom: 'var(--space-8)' }}>
+          <h2 style={{
+            fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--ink-low)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-3)',
+          }}>
             Global role restriction
           </h2>
           <Card>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-3)' }}>
-              Set a role that can use all Nexus commands. Leave empty to allow everyone (or use per-command restrictions below).
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-mid)', marginBottom: 'var(--space-3)', lineHeight: 1.6 }}>
+              Set a role that can use all Nexus commands. Leave empty to allow everyone.
             </p>
             <Select
               value={config.globalRole ?? ''}
@@ -259,51 +267,85 @@ export function GuildDetailPage() {
               ]}
             />
             {config.globalRole !== null && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-mid)', marginTop: 'var(--space-2)' }}>
-                Only users with this role can use Nexus commands.
-              </p>
+              <div style={{
+                marginTop: 'var(--space-3)',
+                padding: 'var(--space-2) var(--space-3)',
+                background: 'var(--accent-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid oklch(72% 0.14 170 / 20%)',
+              }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)' }}>
+                  Only users with this role can use Nexus commands.
+                </p>
+              </div>
             )}
           </Card>
         </section>
 
         {/* Command restrictions */}
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-mid)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-4)' }}>
+        <section className="animate-in" style={{ animationDelay: '180ms', marginBottom: 'var(--space-8)' }}>
+          <h2 style={{
+            fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--ink-low)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-3)',
+          }}>
             Per-command permissions
           </h2>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-4)' }}>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-3)' }}>
             Additional role restrictions for specific commands. These stack with the global role.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {COMMANDS.map((cmd) => {
               const cmdRoles = config.commandRoles[cmd] ?? [];
               const isEditing = roleCommand === cmd;
 
               return (
-                <Card key={cmd}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <Card key={cmd} padding="md">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>/ui {cmd}</span>
-                      {cmdRoles.length === 0 && <Badge variant="success">open</Badge>}
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--ink-high)' }}>/ui {cmd}</span>
+                      {cmdRoles.length === 0 ? (
+                        <Badge variant="success">open</Badge>
+                      ) : (
+                        <Badge variant="warning">{cmdRoles.length}</Badge>
+                      )}
                     </div>
                     {!isEditing && (
-                      <Button variant="ghost" size="sm" onClick={() => setRoleCommand(cmd)}>+ Add role</Button>
+                      <Button variant="ghost" size="sm" onClick={() => { setRoleCommand(cmd); setRoleIdInput(''); }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </Button>
                     )}
                   </div>
 
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-2)' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: cmdRoles.length > 0 || isEditing ? 'var(--space-2)' : 0 }}>
                     {COMMAND_DESCRIPTIONS[cmd] ?? ''}
                   </p>
 
-                  {cmdRoles.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)', marginBottom: isEditing ? 'var(--space-2)' : 0 }}>
+                  {cmdRoles.length > 0 && !isEditing && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)' }}>
                       {cmdRoles.map((roleId) => {
                         const role = roles.find((r) => r.id === roleId);
                         return (
-                          <span key={roleId} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', padding: '2px var(--space-2)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', color: 'var(--ink-mid)' }}>
+                          <span key={roleId} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)',
+                            padding: '2px 6px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--text-xs)', color: 'var(--ink-mid)',
+                            border: '1px solid var(--border)',
+                          }}>
                             {role !== undefined ? `@${role.name}` : roleId}
-                            <button onClick={() => void handleRemoveRole(cmd, roleId)} style={{ color: 'var(--ink-faint)', fontSize: 'var(--text-xs)', lineHeight: 1 }}>×</button>
+                            <button
+                              onClick={() => void handleRemoveRole(cmd, roleId)}
+                              style={{
+                                color: 'var(--ink-faint)', fontSize: '10px', lineHeight: 1,
+                                transition: 'color var(--duration-fast) var(--ease-out)',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-faint)'; }}
+                            >
+                              ×
+                            </button>
                           </span>
                         );
                       })}
@@ -316,12 +358,8 @@ export function GuildDetailPage() {
                         <Select
                           value={roleIdInput}
                           onChange={setRoleIdInput}
-                          options={[
-                            { value: '', label: 'Select a role...' },
-                            ...roles
-                              .filter((r) => !cmdRoles.includes(r.id))
-                              .map((r) => ({ value: r.id, label: `@${r.name}` })),
-                          ]}
+                          placeholder="Select a role..."
+                          options={roles.filter((r) => !cmdRoles.includes(r.id)).map((r) => ({ value: r.id, label: `@${r.name}` }))}
                         />
                       </div>
                       <Button size="sm" onClick={() => { if (roleIdInput) void handleAddRole(); }} disabled={!roleIdInput}>Add</Button>
@@ -335,12 +373,15 @@ export function GuildDetailPage() {
         </section>
 
         {/* Trusted domains */}
-        <section>
-          <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-mid)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-4)' }}>
+        <section className="animate-in" style={{ animationDelay: '240ms' }}>
+          <h2 style={{
+            fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--ink-low)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-3)',
+          }}>
             Trusted domains
           </h2>
           <Card>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)', marginBottom: 'var(--space-3)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-mid)', marginBottom: 'var(--space-3)', lineHeight: 1.6 }}>
               Domains allowed to serve remote JS definitions. GitHub raw and Gist are trusted by default.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
@@ -348,11 +389,22 @@ export function GuildDetailPage() {
               <Button onClick={() => void handleAddDomain()}>Add</Button>
             </div>
             {config.trustedDomains.length === 0 ? (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>No custom domains yet.</p>
+              <div style={{
+                padding: 'var(--space-6)',
+                background: 'var(--bg-elevated)',
+                borderRadius: 'var(--radius-md)',
+                textAlign: 'center',
+              }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>No custom domains yet.</p>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                 {config.trustedDomains.map((domain) => (
-                  <div key={domain} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-2)', borderRadius: 'var(--radius-sm)' }}>
+                  <div key={domain} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-elevated)',
+                  }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--ink-mid)' }}>{domain}</span>
                     <Button variant="ghost" size="sm" onClick={() => void handleRemoveDomain(domain)}>Remove</Button>
                   </div>
@@ -363,5 +415,16 @@ export function GuildDetailPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function Skeleton({ width, height = 16, borderRadius = 'var(--radius-sm)' }: { width?: number | string; height?: number; borderRadius?: string }) {
+  return (
+    <div style={{
+      width, height,
+      background: 'var(--bg-surface)',
+      borderRadius,
+      animation: 'pulse-subtle 1.5s ease-in-out infinite',
+    }} />
   );
 }

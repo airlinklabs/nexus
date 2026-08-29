@@ -27,32 +27,61 @@ export function GuildListPage() {
           setLoading(false);
         }
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const user = auth.status === 'authenticated' ? auth.user : null;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      <header
-        style={{
+      {/* Header */}
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 'var(--space-3) var(--space-6)',
+        background: 'oklch(14% 0.008 250 / 80%)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <Link to="/dashboard" style={{
+          fontFamily: 'var(--font-mono)',
+          fontWeight: 700,
+          fontSize: 'var(--text-base)',
+          color: 'var(--ink-high)',
+          textDecoration: 'none',
+          letterSpacing: '-0.02em',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: 'var(--space-4) var(--space-6)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--ink-high)' }}>
+          gap: 'var(--space-2)',
+        }}>
+          <div style={{
+            width: 28,
+            height: 28,
+            borderRadius: 'var(--radius-sm)',
+            background: 'linear-gradient(135deg, var(--accent), var(--accent-dim))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--bg-base)' }}>N</span>
+          </div>
           nexus
-        </span>
+        </Link>
         {user !== null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               {user.avatar !== null && (
-                <img src={`https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png`} alt="" width={24} height={24} style={{ borderRadius: '50%' }} />
+                <img
+                  src={`https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png?size=32`}
+                  alt=""
+                  width={24}
+                  height={24}
+                  style={{ borderRadius: '50%' }}
+                />
               )}
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-mid)' }}>{user.username}</span>
             </div>
@@ -62,41 +91,70 @@ export function GuildListPage() {
       </header>
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)' }}>
+        {/* Page header */}
+        <div className="animate-in" style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--space-6)',
+        }}>
           <div>
-            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>Your servers</h1>
+            <h1 style={{
+              fontSize: 'var(--text-xl)',
+              fontWeight: 700,
+              color: 'var(--ink-high)',
+              letterSpacing: '-0.02em',
+              marginBottom: 'var(--space-1)',
+            }}>
+              Your servers
+            </h1>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-mid)' }}>
-              Servers where Nexus is installed and you have access.
+              Select a server to configure Nexus.
             </p>
           </div>
           <a
-            href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&scope=bot&permissions=8`}
+            href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&permissions=8&scope=bot%20applications.commands`}
             target="_blank"
             rel="noopener noreferrer"
             style={{ textDecoration: 'none' }}
           >
-            <Button variant="secondary">+ Invite Bot</Button>
+            <Button variant="accent" size="sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Invite Bot
+            </Button>
           </a>
         </div>
 
+        {/* Loading */}
         {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
+        {/* Error */}
         {error !== null && (
-          <Card><p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)' }}>{error}</p></Card>
+          <Card>
+            <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)' }}>{error}</p>
+          </Card>
         )}
 
+        {/* Empty state */}
         {!loading && error === null && guilds.length === 0 && (
           <Card>
             <EmptyState
               title="No servers found"
-              description="Nexus isn't in any servers you have access to. Invite it to get started."
+              description="Nexus isn't in any servers you have access to yet. Invite it to get started."
+              icon={
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                </svg>
+              }
               action={
                 <a
-                  href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&scope=bot&permissions=8`}
+                  href={`https://discord.com/oauth2/authorize?client_id=${import.meta.env['VITE_DISCORD_CLIENT_ID'] ?? 'YOUR_CLIENT_ID'}&permissions=8&scope=bot%20applications.commands`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ textDecoration: 'none' }}
@@ -108,21 +166,63 @@ export function GuildListPage() {
           </Card>
         )}
 
+        {/* Guild list */}
         {!loading && error === null && guilds.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {guilds.map((guild) => (
               <Link key={guild.id} to={`/dashboard/${guild.id}`} style={{ textDecoration: 'none' }}>
-                <Card padding="md" style={{ cursor: 'pointer' }}>
+                <Card padding="md" hover>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                     {guild.icon !== null ? (
-                      <img src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`} alt="" width={36} height={36} style={{ borderRadius: 'var(--radius-sm)' }} />
+                      <img
+                        src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`}
+                        alt=""
+                        width={40}
+                        height={40}
+                        style={{ borderRadius: 'var(--radius-md)' }}
+                      />
                     ) : (
-                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--ink-low)' }}>
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--bg-elevated)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 600,
+                        color: 'var(--accent)',
+                      }}>
                         {guild.name.charAt(0)}
                       </div>
                     )}
-                    <span style={{ flex: 1, fontWeight: 500, color: 'var(--ink-high)' }}>{guild.name}</span>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-faint)' }}>Configure →</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{
+                        fontWeight: 600,
+                        color: 'var(--ink-high)',
+                        fontSize: 'var(--text-sm)',
+                        display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {guild.name}
+                      </span>
+                    </div>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--ink-faint)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
                   </div>
                 </Card>
               </Link>

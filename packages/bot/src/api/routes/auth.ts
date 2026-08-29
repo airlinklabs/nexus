@@ -116,7 +116,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/logout', async (_request, reply) => {
-    reply.clearCookie('nexus_session', { path: '/' });
+    reply.clearCookie('nexus_session', {
+      path: '/',
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     return reply.send({ ok: true });
   });
 

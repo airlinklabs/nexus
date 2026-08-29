@@ -20,6 +20,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
               fontSize: 'var(--text-xs)',
               fontWeight: 500,
               color: 'var(--ink-mid)',
+              letterSpacing: '0.01em',
             }}
           >
             {label}
@@ -33,13 +34,16 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           onChange={(e) => onChange?.(e.target.value)}
           style={{
             fontFamily: mono ? 'var(--font-mono)' : 'var(--font-sans)',
+            fontSize: mono ? 'var(--text-xs)' : 'var(--text-sm)',
             resize: 'vertical',
+            minHeight: rows * 1.6 + 'rem',
             borderColor: error !== undefined ? 'var(--danger)' : undefined,
+            lineHeight: 1.6,
             ...style,
           }}
         />
         {error !== undefined && (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)' }}>{error}</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', lineHeight: 1.4 }}>{error}</span>
         )}
       </div>
     );

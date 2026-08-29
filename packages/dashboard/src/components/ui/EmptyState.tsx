@@ -4,9 +4,10 @@ type EmptyStateProps = {
   readonly title: string;
   readonly description: string;
   readonly action?: ReactNode;
+  readonly icon?: ReactNode;
 };
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
     <div
       style={{
@@ -14,6 +15,15 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
         textAlign: 'center',
       }}
     >
+      {icon !== undefined && (
+        <div style={{
+          marginBottom: 'var(--space-4)',
+          color: 'var(--ink-faint)',
+          fontSize: '2rem',
+        }}>
+          {icon}
+        </div>
+      )}
       <h3
         style={{
           fontSize: 'var(--text-lg)',
@@ -36,7 +46,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
         {description}
       </p>
       {action !== undefined && (
-        <div style={{ marginTop: 'var(--space-4)' }}>{action}</div>
+        <div style={{ marginTop: 'var(--space-5)' }}>{action}</div>
       )}
     </div>
   );

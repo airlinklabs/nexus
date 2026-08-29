@@ -33,6 +33,12 @@ export function ToastContainer() {
 
   if (toasts.length === 0) return null;
 
+  const colorMap = {
+    success: 'var(--success)',
+    error: 'var(--danger)',
+    info: 'var(--info)',
+  };
+
   return (
     <div
       style={{
@@ -55,9 +61,10 @@ export function ToastContainer() {
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--text-sm)',
             color: 'var(--ink-high)',
-            boxShadow: '0 4px 12px oklch(0% 0 0 / 40%)',
-            borderLeft: `3px solid var(--${toast.variant === 'success' ? 'success' : toast.variant === 'error' ? 'danger' : 'info'})`,
+            boxShadow: 'var(--shadow-lg)',
+            borderLeft: `3px solid ${colorMap[toast.variant]}`,
             maxWidth: 360,
+            animation: 'slide-in-right var(--duration-enter) var(--ease-out)',
           }}
         >
           {toast.message}
