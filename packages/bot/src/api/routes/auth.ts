@@ -14,6 +14,7 @@ function oauthUrl(state: string): string {
     response_type: 'code',
     scope: SCOPES,
     state,
+    prompt: 'consent',
   });
   return `https://discord.com/oauth2/authorize?${params.toString()}`;
 }
